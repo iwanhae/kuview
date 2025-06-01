@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	clog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -49,15 +50,17 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to create event emitter: %w", err)
 	}
 
+	logger := logr.New(logger.New(log.Logger))
 	mgr, err := manager.New(cfg, manager.Options{
 		LeaderElection:   false,
 		Metrics:          server.Options{BindAddress: "0"},
 		PprofBindAddress: "0",
-		Logger:           logr.New(logger.New(log.Logger)),
+		Logger:           logger,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create manager: %w", err)
 	}
+	clog.SetLogger(logger)
 
 	c, err := controller.New("kuview", mgr, controller.Options{
 		Reconciler: &DummyReconciler{},
