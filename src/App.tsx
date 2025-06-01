@@ -6,6 +6,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import Root from "./pages/root";
+import Node from "./pages/node";
 import KuviewBackground from "./backgrounds/kuview";
 
 export default function Page() {
@@ -20,6 +21,7 @@ export default function Page() {
         </header>
         <Switch>
           <Route path="/" component={Root} />
+          <Route path="/node" component={Node} />
         </Switch>
       </SidebarInset>
       <KuviewBackground />
