@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Home, Server } from "lucide-react";
+import { Home, Server, Rocket } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import { PREFIX } from "@/lib/const";
@@ -16,6 +16,11 @@ const data = {
       title: "Node",
       url: `${PREFIX}/node`,
       icon: Server,
+    },
+    {
+      title: "Pod",
+      url: `${PREFIX}/pod`,
+      icon: Rocket,
     },
   ],
 };
