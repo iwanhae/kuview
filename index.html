@@ -19,9 +19,10 @@
       go.env = {
         HOST: `${location.protocol}//${location.host}`,
       };
+      window.kuviewEventQueue = [];
       document.kuview = (event) => {
-        // TODO: Implement
-        console.log(event);
+        window.kuviewEventQueue.push(event);
+        console.log("Event queued:", event);
       }
       go.run(result.instance);
     });
