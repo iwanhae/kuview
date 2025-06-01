@@ -1,24 +1,29 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>kuview</title>
-  </head>
 
-  <body>
-    <script src="/wasm_exec.js"></script>
-    <script>
-      const go = new Go();
-      WebAssembly.instantiateStreaming(
-        fetch("/main.wasm"),
-        go.importObject,
-      ).then((result) => {
-        go.run(result.instance);
-      });
-    </script>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kuview</title>
+</head>
+
+<body>
+  <script src="/wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(
+      fetch("/main.wasm"),
+      go.importObject,
+    ).then((result) => {
+      go.env = {
+        HOST: `${location.protocol}//${location.host}`,
+      };
+      go.run(result.instance);
+    });
+  </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
