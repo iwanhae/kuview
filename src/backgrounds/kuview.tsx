@@ -6,7 +6,7 @@ import {
 } from "@/lib/kuviewAtom";
 import { useEffect } from "react";
 
-interface DocumentWithKuview extends Document {
+interface WindowWithKuview extends Window {
   kuview: (event: KuviewEvent) => void;
 }
 
@@ -17,6 +17,7 @@ interface WindowWithKuviewQueue extends Window {
 export default function KuviewBackground() {
   // Enqueue events from WASM published events
   useEffect(() => {
+    console.log("KuviewBackground mounted");
     // Process any queued events first
     const windowWithQueue = window as WindowWithKuviewQueue;
     if (
@@ -29,16 +30,17 @@ export default function KuviewBackground() {
       );
       windowWithQueue.kuviewEventQueue.forEach((event) => handleEvent(event));
       windowWithQueue.kuviewEventQueue = []; // Clear the queue
-    }
+    } else console.log("No queued events");
 
     // Set the actual event handler
-    (document as DocumentWithKuview).kuview = (event: KuviewEvent) => {
+    console.log("Setting event handler");
+    (window as unknown as WindowWithKuview).kuview = (event: KuviewEvent) => {
       handleEvent(event);
     };
 
     // Cleanup function to remove the event handler if the component unmounts
     return () => {
-      (document as DocumentWithKuview).kuview = (event: KuviewEvent) => {
+      (window as unknown as WindowWithKuview).kuview = (event: KuviewEvent) => {
         // Optionally, re-instate queueing or log if events are received after unmount
         console.log(
           "KuviewBackground unmounted, event received but not handled:",

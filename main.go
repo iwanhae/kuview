@@ -28,7 +28,7 @@ import (
 )
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(zerolog.InfoLevel)
 
 	log.Info().
 		Strs("env", os.Environ()).
@@ -144,15 +144,15 @@ const (
 )
 
 type EventEmitter struct {
-	document js.Value
-	Name     string
+	window js.Value
+	Name   string
 }
 
 func NewJSEventEmitter(name string) (*EventEmitter, error) {
-	document := js.Global().Get("document")
+	window := js.Global().Get("window")
 	res := EventEmitter{
-		Name:     name,
-		document: document,
+		Name:   name,
+		window: window,
 	}
 	return &res, nil
 }
@@ -165,5 +165,5 @@ func (j *EventEmitter) Emit(v *Event) {
 	}
 
 	val := js.Global().Get("JSON").Call("parse", string(b))
-	j.document.Call(j.Name, val)
+	j.window.Call(j.Name, val)
 }

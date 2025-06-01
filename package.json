@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "wasm": "GOOS=js GOARCH=wasm go build -o public/main.wasm ./main.go",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "kubectl proxy --www=./dist --www-prefix=/static"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

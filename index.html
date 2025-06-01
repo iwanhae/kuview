@@ -9,21 +9,20 @@
 </head>
 
 <body>
-  <script src="/wasm_exec.js"></script>
+  <script src="/static/wasm_exec.js"></script>
   <script>
     const go = new Go();
+    window.kuviewEventQueue = [];
+    window.kuview = (event) => {
+      window.kuviewEventQueue.push(event);
+    }
     WebAssembly.instantiateStreaming(
-      fetch("/main.wasm"),
+      fetch("/static/main.wasm"),
       go.importObject,
     ).then((result) => {
       go.env = {
         HOST: `${location.protocol}//${location.host}`,
       };
-      window.kuviewEventQueue = [];
-      document.kuview = (event) => {
-        window.kuviewEventQueue.push(event);
-        console.log("Event queued:", event);
-      }
       go.run(result.instance);
     });
   </script>

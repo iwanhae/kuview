@@ -9,12 +9,12 @@ import Root from "./pages/root";
 import Node from "./pages/node";
 import KuviewBackground from "./backgrounds/kuview";
 import Debug from "./pages/debug";
-
-export const PREFIX = "/static";
+import { PREFIX } from "./lib/const";
 
 export default function Page() {
   return (
     <SidebarProvider defaultOpen={false}>
+      <KuviewBackground />
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -28,7 +28,6 @@ export default function Page() {
           <Route path={`${PREFIX}/debug`} component={Debug} />
         </Switch>
       </SidebarInset>
-      <KuviewBackground />
     </SidebarProvider>
   );
 }
