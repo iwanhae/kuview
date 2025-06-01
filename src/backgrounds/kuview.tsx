@@ -1,5 +1,9 @@
 import type { KuviewEvent } from "@/lib/kuview";
-import { useKuviewStore } from "@/lib/kuview";
+import {
+  handleEvent,
+  useGVKSyncHook,
+  useKubernetesSyncHook,
+} from "@/lib/kuviewAtom";
 import { useEffect } from "react";
 
 interface DocumentWithKuview extends Document {
@@ -11,8 +15,7 @@ interface WindowWithKuviewQueue extends Window {
 }
 
 export default function KuviewBackground() {
-  const { handleEvent } = useKuviewStore();
-
+  // Enqueue events from WASM published events
   useEffect(() => {
     // Process any queued events first
     const windowWithQueue = window as WindowWithKuviewQueue;
@@ -43,7 +46,24 @@ export default function KuviewBackground() {
         );
       };
     };
-  }, [handleEvent]);
+  }, []);
 
+  return <SyncKubernetes />;
+}
+
+function SyncKubernetes() {
+  // Sync Kubernetes objects from the server
+  const gvks = useKubernetesSyncHook();
+  return (
+    <>
+      {gvks.map((gvk) => (
+        <SyncKubernetesGVK key={gvk} gvk={gvk} />
+      ))}
+    </>
+  );
+}
+
+function SyncKubernetesGVK({ gvk }: { gvk: string }) {
+  useGVKSyncHook(gvk);
   return <></>;
 }
