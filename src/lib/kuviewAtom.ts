@@ -46,7 +46,6 @@ export function useKubernetesSyncHook(): Array<string> {
         }
       });
       setKubernetes({ ...kubernetes });
-
     }, DEBOUNCE_MS);
     return () => clearInterval(interval);
   }, [kubernetes, setKubernetes])

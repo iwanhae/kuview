@@ -9,20 +9,22 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/iwanhae/kuview/pkg/logger"
-	"github.com/iwanhae/kuview/pkg/watcher"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 		Strs("env", os.Environ()).
 		Msg("Starting kuview")
 
-	if err := run(context.Background()); err != nil {
+	if err := run(signals.SetupSignalHandler()); err != nil {
 		log.Fatal().Err(err).Msg("Failed to run kuview")
 	}
 }
@@ -57,47 +59,60 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	for _, o := range []struct {
-		obj client.Object
-		ctr reconcile.Reconciler
-	}{
-		{obj: &v1.Node{}, ctr: &watcher.NodeWatcher{}},
+	c, err := controller.New("kuview", mgr, controller.Options{
+		Reconciler: &DummyReconciler{},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create controller: %w", err)
+	}
+
+	for _, objType := range []client.Object{
+		&v1.Node{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Node"}},
+		&v1.Pod{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Pod"}},
+		&v1.Namespace{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"}},
+		&v1.Service{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"}},
 	} {
-		if err := builder.ControllerManagedBy(mgr).
-			Named("kuview").
-			WatchesMetadata(o.obj, &handler.EnqueueRequestForObject{}).
-			WithEventFilter(predicate.Funcs{
-				CreateFunc: func(e event.CreateEvent) bool {
-					emitter.Emit(&Event{
-						Type:   EventTypeCreate,
-						Object: e.Object,
-					})
-					return true
-				},
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					emitter.Emit(&Event{
-						Type:   EventTypeUpdate,
-						Object: e.ObjectNew,
-					})
-					return true
-				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
-					emitter.Emit(&Event{
-						Type:   EventTypeDelete,
-						Object: e.Object,
-					})
-					return true
-				},
-				GenericFunc: func(e event.GenericEvent) bool {
-					emitter.Emit(&Event{
-						Type:   EventTypeGeneric,
-						Object: e.Object,
-					})
-					return true
-				},
-			}).
-			Complete(o.ctr); err != nil {
-			return fmt.Errorf("failed to create controller: %w", err)
+		err := c.Watch(
+			source.Kind(
+				mgr.GetCache(),
+				objType,
+				&handler.TypedEnqueueRequestForObject[client.Object]{},
+				predicate.Funcs{
+					CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
+						e.Object.GetObjectKind().SetGroupVersionKind(objType.GetObjectKind().GroupVersionKind())
+						emitter.Emit(&Event{
+							Type:   EventTypeCreate,
+							Object: e.Object,
+						})
+						return true
+					},
+					UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+						e.ObjectNew.GetObjectKind().SetGroupVersionKind(objType.GetObjectKind().GroupVersionKind())
+						emitter.Emit(&Event{
+							Type:   EventTypeUpdate,
+							Object: e.ObjectNew,
+						})
+						return true
+					},
+					DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
+						e.Object.GetObjectKind().SetGroupVersionKind(objType.GetObjectKind().GroupVersionKind())
+						emitter.Emit(&Event{
+							Type:   EventTypeDelete,
+							Object: e.Object,
+						})
+						return true
+					},
+					GenericFunc: func(e event.TypedGenericEvent[client.Object]) bool {
+						e.Object.GetObjectKind().SetGroupVersionKind(objType.GetObjectKind().GroupVersionKind())
+						emitter.Emit(&Event{
+							Type:   EventTypeGeneric,
+							Object: e.Object,
+						})
+						return true
+					},
+				}))
+		if err != nil {
+			return fmt.Errorf("failed to watch %s: %w", objType.GetObjectKind().GroupVersionKind().String(), err)
 		}
 	}
 
@@ -106,6 +121,12 @@ func run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+type DummyReconciler struct{}
+
+func (r *DummyReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	return reconcile.Result{}, nil
 }
 
 type Event struct {
