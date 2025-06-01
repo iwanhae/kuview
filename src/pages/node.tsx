@@ -1,6 +1,6 @@
+import Treemap from "@/components/custom/treemap";
 import { useKuview } from "@/hooks/useKuview";
-import type { KubernetesObject } from "@/lib/kuview";
-import { useState } from "react";
+import type { KubernetesObject, NodeObject, PodObject } from "@/lib/kuview";
 
 // Extended types for Node and Pod resources
 interface NodeInfo {
@@ -260,11 +260,9 @@ function PodResourceUsage({
   node,
   pods,
 }: {
-  node: KubernetesObject;
-  pods: KubernetesObject[];
+  node: NodeObject;
+  pods: PodObject[];
 }) {
-  const [showAllPods, setShowAllPods] = useState(false);
-
   const nodeStatus = node.status as NodeStatus;
   const capacity = nodeStatus?.capacity || {};
   const capacityCpu = parseResourceQuantity(capacity.cpu || "0");
@@ -276,33 +274,13 @@ function PodResourceUsage({
   let totalLimitsCpu = 0;
   let totalLimitsMemory = 0;
 
-  const podResources = pods.map((pod) => {
+  pods.forEach((pod) => {
     const resources = calculatePodResources(pod);
     totalRequestsCpu += resources.requestsCpu;
     totalRequestsMemory += resources.requestsMemory;
     totalLimitsCpu += resources.limitsCpu;
     totalLimitsMemory += resources.limitsMemory;
-
-    return {
-      pod,
-      ...resources,
-      totalUsage:
-        resources.requestsCpu + resources.requestsMemory / (1024 * 1024 * 1024), // Normalize to compare
-    };
   });
-
-  // Sort pods: Failed first, then by resource usage
-  const sortedPods = podResources.sort((a, b) => {
-    const aStatus = (a.pod.status as PodStatus)?.phase;
-    const bStatus = (b.pod.status as PodStatus)?.phase;
-
-    if (aStatus === "Failed" && bStatus !== "Failed") return -1;
-    if (bStatus === "Failed" && aStatus !== "Failed") return 1;
-
-    return b.totalUsage - a.totalUsage;
-  });
-
-  const displayedPods = showAllPods ? sortedPods : sortedPods.slice(0, 3);
 
   // Pod status statistics
   const statusCounts = pods.reduce(
@@ -396,80 +374,23 @@ function PodResourceUsage({
 
       {/* Pod List */}
       <div className="space-y-2">
-        {displayedPods.map(
-          ({ pod, requestsCpu, requestsMemory, limitsCpu, limitsMemory }) => {
-            const status = (pod.status as PodStatus)?.phase || "Unknown";
-            const statusColor =
-              status === "Failed"
-                ? "border-red-500 bg-red-50"
-                : status === "Running"
-                  ? "border-gray-500 bg-gray-50"
-                  : status === "Pending"
-                    ? "border-yellow-500 bg-yellow-50"
-                    : "border-gray-500 bg-gray-50";
-
-            return (
-              <div
-                key={pod.metadata.uid}
-                className={`border rounded-lg p-3 ${statusColor}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {pod.metadata.name}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {pod.metadata.namespace &&
-                        `ns: ${pod.metadata.namespace}`}
-                    </div>
-                  </div>
-                  <div className="text-xs font-medium">Status: {status}</div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                  <div>
-                    <span className="text-gray-500">CPU Req:</span>{" "}
-                    <span className="font-medium">
-                      {formatResourceQuantity(requestsCpu, "cpu")}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Mem Req:</span>{" "}
-                    <span className="font-medium">
-                      {formatResourceQuantity(requestsMemory, "memory")}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">CPU Lim:</span>{" "}
-                    <span className="font-medium">
-                      {limitsCpu > 0
-                        ? formatResourceQuantity(limitsCpu, "cpu")
-                        : "None"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Mem Lim:</span>{" "}
-                    <span className="font-medium">
-                      {limitsMemory > 0
-                        ? formatResourceQuantity(limitsMemory, "memory")
-                        : "None"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          },
-        )}
-
-        {sortedPods.length > 3 && (
-          <button
-            onClick={() => setShowAllPods(!showAllPods)}
-            className="w-full text-sm text-blue-600 hover:text-blue-800 py-2"
-          >
-            {showAllPods
-              ? "Show Less"
-              : `Show ${sortedPods.length - 3} More Pods`}
-          </button>
-        )}
+        <Treemap
+          items={pods.map((pod) => ({
+            name: pod.metadata.name,
+            value:
+              pod.spec.containers?.reduce((acc, container) => {
+                return (
+                  acc +
+                  parseResourceQuantity(
+                    container.resources?.requests?.memory || "0",
+                  )
+                );
+              }, 0) || 0,
+            href: `/node/${pod.metadata.name}`,
+          }))}
+          width={800}
+          height={500}
+        />
       </div>
     </div>
   );
@@ -493,7 +414,7 @@ export default function Node() {
       groups[groupKey].push([key, node]);
       return groups;
     },
-    {} as Record<string, Array<[string, KubernetesObject]>>,
+    {} as Record<string, Array<[string, NodeObject]>>,
   );
 
   return (

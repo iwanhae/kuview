@@ -8,6 +8,7 @@ import {
 import Root from "./pages/root";
 import Node from "./pages/node";
 import KuviewBackground from "./backgrounds/kuview";
+import Debug from "./pages/debug";
 
 export default function Page() {
   return (
@@ -22,6 +23,7 @@ export default function Page() {
         <Switch>
           <Route path="/" component={Root} />
           <Route path="/node" component={Node} />
+          <Route path="/debug" component={Debug} />
         </Switch>
       </SidebarInset>
       <KuviewBackground />
