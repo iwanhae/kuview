@@ -6,6 +6,7 @@ import path from "path";
 // https://vite.dev/config/
 export default defineConfig({
   base: "/static/",
+  publicDir: "static",
   server: {
     proxy: {
       "/api": "http://localhost:8001",
