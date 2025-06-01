@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Link } from "wouter";
 
 export function NavMain({
   items,
@@ -34,10 +35,10 @@ export function NavMain({
           >
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={item.title}>
-                {item.icon && <item.icon />}
-                <a href={item.url}>
+                <Link to={item.url} className="flex items-center gap-2">
+                  {item.icon && <item.icon />}
                   <span>{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </Collapsible>
