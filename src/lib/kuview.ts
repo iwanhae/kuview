@@ -7,11 +7,28 @@ export interface KuviewObjectMap {
   "v1/Pod": PodObject;
   "v1/Service": ServiceObject;
   "v1/Node": NodeObject;
+  "v1/Namespace": NamespaceObject;
 }
 
 export type GVK = keyof KuviewObjectMap;
 
 export type KuviewObjectType<T extends GVK> = KuviewObjectMap[T];
+
+export interface NamespaceObject extends KubernetesObject {
+  kind: "Namespace"
+  apiVersion: "v1"
+  metadata: Metadata
+  spec: NamespaceSpec
+  status: NamespaceStatus
+}
+
+interface NamespaceSpec {
+  finalizers?: string[]
+}
+
+interface NamespaceStatus {
+  phase: string
+}
 
 export interface KubernetesObject {
   kind: string

@@ -1,4 +1,4 @@
-import Treemap from "@/components/custom/treemap";
+import Treemap from "@/components/ui/treemap";
 import { useKuview } from "@/hooks/useKuview";
 import type { KubernetesObject, NodeObject, PodObject } from "@/lib/kuview";
 

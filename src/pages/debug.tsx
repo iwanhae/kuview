@@ -1,4 +1,4 @@
-import Treemap from "@/components/custom/treemap";
+import Treemap from "@/components/ui/treemap";
 
 interface Item {
   name: string;

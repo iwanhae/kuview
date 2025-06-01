@@ -2,18 +2,19 @@ import * as React from "react";
 import { Home, Server } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
+import { PREFIX } from "@/App";
 
 // This is sample data.
 const data = {
   navMain: [
     {
       title: "Home",
-      url: "/",
+      url: `${PREFIX}/`,
       icon: Home,
     },
     {
       title: "Node",
-      url: "/node",
+      url: `${PREFIX}/node`,
       icon: Server,
     },
   ],

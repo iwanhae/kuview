@@ -10,6 +10,8 @@ import Node from "./pages/node";
 import KuviewBackground from "./backgrounds/kuview";
 import Debug from "./pages/debug";
 
+export const PREFIX = "/static";
+
 export default function Page() {
   return (
     <SidebarProvider defaultOpen={false}>
@@ -21,9 +23,9 @@ export default function Page() {
           </div>
         </header>
         <Switch>
-          <Route path="/" component={Root} />
-          <Route path="/node" component={Node} />
-          <Route path="/debug" component={Debug} />
+          <Route path={`${PREFIX}/`} component={Root} />
+          <Route path={`${PREFIX}/node`} component={Node} />
+          <Route path={`${PREFIX}/debug`} component={Debug} />
         </Switch>
       </SidebarInset>
       <KuviewBackground />
