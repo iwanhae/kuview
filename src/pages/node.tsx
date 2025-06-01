@@ -1,4 +1,6 @@
+import { useState } from "react";
 import Treemap from "@/components/ui/treemap";
+import { WaffleChart } from "@/components/block/waffle-chart";
 import { useKuview } from "@/hooks/useKuview";
 import type { KubernetesObject, NodeObject, PodObject } from "@/lib/kuview";
 
@@ -400,26 +402,18 @@ export default function Node() {
   const nodes = useKuview("v1/Node");
   const pods = useKuview("v1/Pod");
 
+  const [selectedNodeKey, setSelectedNodeKey] = useState<string | null>(null);
+
   const nodeEntries = Object.entries(nodes);
+  const selectedNode = selectedNodeKey ? nodes[selectedNodeKey] : null;
 
-  // Group nodes by hardware specs (CPU and Memory capacity)
-  const nodeGroups = nodeEntries.reduce(
-    (groups, [key, node]) => {
-      const capacity = (node.status as NodeStatus)?.capacity || {};
-      const groupKey = `${capacity.cpu || "0"}-${capacity.memory || "0"}`;
-
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push([key, node]);
-      return groups;
-    },
-    {} as Record<string, Array<[string, NodeObject]>>,
-  );
+  const handleNodeClick = (nodeKey: string) => {
+    setSelectedNodeKey(nodeKey === selectedNodeKey ? null : nodeKey);
+  };
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+      <div className="flex items-center gap-2">
         <span className="text-2xl">🖥️</span>
         <h1 className="text-2xl font-bold">Node Overview</h1>
       </div>
@@ -431,55 +425,50 @@ export default function Node() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(nodeGroups).map(([groupKey, groupNodes]) => {
-            const [cpu, memory] = groupKey.split("-");
-            return (
-              <div key={groupKey} className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <h2 className="text-lg font-semibold text-blue-800">
-                    Hardware Group: {parseResourceQuantity(cpu).toFixed(1)} CPU,{" "}
-                    {formatResourceQuantity(
-                      parseResourceQuantity(memory),
-                      "memory",
-                    )}{" "}
-                    Memory
-                    <span className="text-sm font-normal text-blue-600 ml-2">
-                      ({groupNodes.length} nodes)
-                    </span>
-                  </h2>
-                </div>
+        <>
+          {/* Waffle Chart */}
+          <WaffleChart
+            nodes={nodeEntries}
+            selectedNode={selectedNodeKey}
+            onNodeClick={handleNodeClick}
+          />
 
-                {groupNodes.map(([key, node]) => {
-                  const nodePods = Object.values(pods).filter(
-                    (pod) =>
-                      (pod.spec as PodSpec)?.nodeName === node.metadata.name,
-                  );
-
-                  return (
-                    <div
-                      key={key}
-                      className="space-y-4 border-l-4 border-blue-200 pl-4"
-                    >
-                      <h3 className="text-xl font-semibold text-gray-800">
-                        📍 {node.metadata.name}
-                      </h3>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <NodeInfoCard node={node} />
-                        <NodeStatusCard node={node} />
-                      </div>
-
-                      <NodeCapacityCard node={node} />
-
-                      <PodResourceUsage node={node} pods={nodePods} />
-                    </div>
-                  );
-                })}
+          {/* Node Details */}
+          {selectedNode && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h2 className="text-xl font-semibold text-blue-800">
+                  📍 {selectedNode.metadata.name} - Detailed Information
+                </h2>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <NodeInfoCard node={selectedNode} />
+                <NodeStatusCard node={selectedNode} />
+              </div>
+
+              <NodeCapacityCard node={selectedNode} />
+
+              <PodResourceUsage
+                node={selectedNode}
+                pods={Object.values(pods).filter(
+                  (pod) =>
+                    (pod.spec as PodSpec)?.nodeName ===
+                    selectedNode.metadata.name,
+                )}
+              />
+            </div>
+          )}
+
+          {/* Show instruction when no node is selected */}
+          {!selectedNode && (
+            <div className="bg-muted/50 rounded-xl p-8 text-center">
+              <p className="text-gray-500">
+                👆 Click on a node block above to view detailed information
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
