@@ -5,6 +5,12 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      "/api": "http://localhost:8001",
+      "/apis": "http://localhost:8001",
+    },
+  },
   build: {
     watch: {
       include: ["main.go", "pkg/**", "src/**"],
