@@ -48,6 +48,7 @@ export interface Metadata {
   annotations?: Annotations
   finalizers?: string[]
   namespace?: string
+  deletionTimestamp?: string
 }
 
 export interface Labels {
@@ -99,7 +100,16 @@ interface Container {
 }
 
 interface PodStatus {
+  conditions?: PodCondition[]
   phase: string
+  qosClass: "Guaranteed" | "Burstable" | "BestEffort"
+}
+
+interface PodCondition {
+  type: string
+  status: string
+  lastTransitionTime: string
+  lastProbeTime: string | null
 }
 
 interface ServiceSpec {
