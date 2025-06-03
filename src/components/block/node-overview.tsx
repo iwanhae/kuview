@@ -1,6 +1,6 @@
 import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject } from "@/lib/kuview";
-import { podStatus, Status } from "@/lib/status";
+import { podStatus, Status, STATUS_COLORS } from "@/lib/status";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -33,19 +33,19 @@ export default function NodeOverview({ node }: NodeOverviewProps) {
     const status = podStatus(pod);
     switch (status) {
       case Status.Running:
-        return "bg-green-500";
+        return STATUS_COLORS.Running.color + " animate-pulse";
       case Status.Pending:
-        return "bg-yellow-500";
+        return STATUS_COLORS.Pending.color;
       case Status.Error:
-        return "bg-red-500";
+        return STATUS_COLORS.Error.color + " animate-bounce";
       case Status.Done:
-        return "bg-blue-500";
+        return STATUS_COLORS.Done.color;
       case Status.Warning:
-        return "bg-orange-500";
+        return STATUS_COLORS.Warning.color + " animate-caret-blink";
       case Status.Terminating:
-        return "bg-purple-500";
+        return STATUS_COLORS.Terminating.color + " animate-pulse";
       default:
-        return "bg-gray-500";
+        return STATUS_COLORS.Pending.color;
     }
   };
 
@@ -65,7 +65,7 @@ export default function NodeOverview({ node }: NodeOverviewProps) {
                   >
                     <TooltipTrigger asChild>
                       <div
-                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-colors ${getStatusColor(pod)}`}
+                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-all  ${getStatusColor(pod)}`}
                         onClick={() => handlePodClick(pod)}
                       />
                     </TooltipTrigger>
