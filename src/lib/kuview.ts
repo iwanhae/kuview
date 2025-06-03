@@ -103,6 +103,41 @@ interface PodStatus {
   conditions?: PodCondition[]
   phase: string
   qosClass: "Guaranteed" | "Burstable" | "BestEffort"
+  containerStatuses: ContainerStatus[]
+  state: {
+    waiting: {
+      message: string
+      reason: string
+    } | null
+  }
+}
+
+interface ContainerStatus {
+  containerID: string
+  image: string
+  imageID: string
+  lastState: {
+    terminated: {
+      containerID: string
+      exitCode: number
+      finishedAt: string
+      reason: string
+      startedAt: string
+    } | null
+  }
+  name: string
+  ready: boolean
+  restartCount: number
+  started: boolean
+  state: {
+    running: {
+      startedAt: string
+    } | null
+    waiting: {
+      message: string
+      reason: string
+    } | null
+  }
 }
 
 interface PodCondition {

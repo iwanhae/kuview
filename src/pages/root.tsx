@@ -1,7 +1,7 @@
 import CardResourceOverview from "@/components/block/card-resource-overview";
 import { useKuview } from "@/hooks/useKuview";
 import type { Status } from "@/lib/status";
-import { nodeStatus, podStatus } from "@/lib/status";
+import { namespaceStatus, nodeStatus, podStatus } from "@/lib/status";
 
 export default function Root() {
   const nodes = useKuview("v1/Node");
@@ -19,6 +19,18 @@ export default function Root() {
           status={Object.values(nodes).reduce(
             (acc, node) => {
               const status = nodeStatus(node);
+              acc[status] = (acc[status] || 0) + 1;
+              return acc;
+            },
+            {} as Record<Status, number>,
+          )}
+        />
+        {/* Namespaces */}
+        <CardResourceOverview
+          resourceName="Namespaces"
+          status={Object.values(namespaces).reduce(
+            (acc, namespace) => {
+              const status = namespaceStatus(namespace);
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },
