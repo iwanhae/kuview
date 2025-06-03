@@ -1,5 +1,11 @@
 import type { NodeObject } from "@/lib/kuview";
 import { useState, useMemo, useEffect } from "react";
+import {
+  nodeStatus,
+  Status,
+  STATUS_COLORS,
+  OVERVIEW_STATUS_ORDER,
+} from "@/lib/status";
 
 interface NodeSearchProps {
   nodes: NodeObject[];
@@ -14,19 +20,51 @@ export default function NodeSearch({
 }: NodeSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedStatuses, setSelectedStatuses] = useState<Status[]>([]);
   const itemsPerPage = 100;
 
-  // Filter nodes based on search query
-  const filteredNodes = useMemo(() => {
-    if (!searchQuery.trim()) {
+  // Nodes filtered by text search query (name or label)
+  const nodesMatchingSearchQuery = useMemo(() => {
+    const trimmedSearchQuery = searchQuery.trim().toLowerCase();
+    if (!trimmedSearchQuery) {
       return nodes;
     }
-
-    const lowercaseQuery = searchQuery.toLowerCase();
-    return nodes.filter((node) =>
-      node.metadata.name.toLowerCase().includes(lowercaseQuery),
-    );
+    return nodes.filter((node) => {
+      const nameMatch = node.metadata.name
+        .toLowerCase()
+        .includes(trimmedSearchQuery);
+      const labelMatch = Object.values(node.metadata.labels || {}).some(
+        (labelValue) =>
+          String(labelValue).toLowerCase().includes(trimmedSearchQuery),
+      );
+      return nameMatch || labelMatch;
+    });
   }, [nodes, searchQuery]);
+
+  // Calculate counts for each status based on nodesMatchingSearchQuery
+  const statusCounts = useMemo(() => {
+    const counts: Record<Status, number> = OVERVIEW_STATUS_ORDER.reduce(
+      (acc, status) => ({ ...acc, [status]: 0 }),
+      {} as Record<Status, number>,
+    );
+    nodesMatchingSearchQuery.forEach((node) => {
+      const status = nodeStatus(node);
+      if (counts[status] !== undefined) {
+        counts[status]++;
+      }
+    });
+    return counts;
+  }, [nodesMatchingSearchQuery]);
+
+  // Filter nodes based on selected statuses
+  const filteredNodes = useMemo(() => {
+    if (selectedStatuses.length === 0) {
+      return nodesMatchingSearchQuery;
+    }
+    return nodesMatchingSearchQuery.filter((node) =>
+      selectedStatuses.includes(nodeStatus(node)),
+    );
+  }, [nodesMatchingSearchQuery, selectedStatuses]);
 
   // Calculate nodes for the current page
   const paginatedNodes = useMemo(() => {
@@ -54,7 +92,25 @@ export default function NodeSearch({
     if (nodeNameFromUrl && onNodeSelect) {
       onNodeSelect(nodeNameFromUrl);
     }
+
+    const nodeFilterFromUrl = params.get("nodeFilter");
+    if (nodeFilterFromUrl) {
+      const statuses = nodeFilterFromUrl.split(",") as Status[];
+      setSelectedStatuses(
+        statuses.filter((s) => OVERVIEW_STATUS_ORDER.includes(s)),
+      );
+    }
   }, [onNodeSelect]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (selectedStatuses.length > 0) {
+      params.set("nodeFilter", selectedStatuses.join(","));
+    } else {
+      params.delete("nodeFilter");
+    }
+    history.pushState(null, "", `?${params.toString()}`);
+  }, [selectedStatuses]);
 
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -62,6 +118,15 @@ export default function NodeSearch({
 
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleStatusChange = (status: Status) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status],
+    );
+    setCurrentPage(1); // Reset to first page on filter change
   };
 
   return (
@@ -85,12 +150,35 @@ export default function NodeSearch({
         )}
       </div>
 
-      {/* Results Count */}
+      {/* Results Count & Status Filter */}
       <div className="flex items-center justify-between text-sm text-gray-500">
-        <span>
+        <div>
           Showing {paginatedNodes.length} of {filteredNodes.length} nodes
           {searchQuery && ` matching "${searchQuery}"`}
-        </span>
+          {selectedStatuses.length > 0 && ` (filtered by status)`}
+        </div>
+        <div className="flex items-center space-x-2">
+          {OVERVIEW_STATUS_ORDER.map((status) => {
+            const count = statusCounts[status];
+            if (count === 0) return null; // Hide checkbox if count is 0
+            return (
+              <label
+                key={status}
+                className="flex items-center space-x-1 cursor-pointer text-xs"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedStatuses.includes(status)}
+                  onChange={() => handleStatusChange(status)}
+                  className="form-checkbox h-3 w-3 text-blue-600 rounded"
+                />
+                <span className={STATUS_COLORS[status].textColor}>
+                  {status} ({count})
+                </span>
+              </label>
+            );
+          })}
+        </div>
         {totalPages > 1 && (
           <span className="ml-4">
             Page {currentPage} of {totalPages}
@@ -108,11 +196,12 @@ export default function NodeSearch({
           </p>
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
+        <div className="border border-gray-200 rounded-lg overflow-hidden h-[200px] overflow-y-auto">
           {paginatedNodes.map((node) => (
             <Row
               key={node.metadata.name}
               node={node}
+              nodeCurrentStatus={nodeStatus(node)}
               selectedNodeName={selectedNodeName}
               onNodeSelect={handleNodeSelectInternal}
             />
@@ -145,27 +234,39 @@ export default function NodeSearch({
 
 interface RowProps {
   node: NodeObject;
+  nodeCurrentStatus: Status;
   selectedNodeName?: string;
   onNodeSelect?: (nodeName: string) => void;
 }
 
-const Row = ({ node, selectedNodeName, onNodeSelect }: RowProps) => {
+const Row = ({
+  node,
+  nodeCurrentStatus,
+  selectedNodeName,
+  onNodeSelect,
+}: RowProps) => {
   const isSelected = selectedNodeName === node.metadata.name;
+  const statusColor = STATUS_COLORS[nodeCurrentStatus]?.color || "bg-gray-500";
 
   return (
     <div
-      className={`flex items-center px-4 py-2 border-b border-gray-100 cursor-pointer transition-colors ${
+      className={`flex items-center justify-between px-4 py-2 border-b border-gray-100 cursor-pointer transition-colors ${
         isSelected ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"
       }`}
       onClick={() => onNodeSelect?.(isSelected ? "" : node.metadata.name)}
     >
-      <span
-        className={`text-sm font-mono ${
-          isSelected ? "text-blue-700 font-medium" : "text-gray-900"
-        }`}
-      >
-        {node.metadata.name}
-      </span>
+      <div className="flex items-center">
+        <div
+          className={`w-2 h-2 rounded-full mr-2 animate-pulse ${statusColor}`}
+        />
+        <span
+          className={`text-sm font-mono ${
+            isSelected ? "text-blue-700 font-medium" : "text-gray-900"
+          }`}
+        >
+          {node.metadata.name}
+        </span>
+      </div>
     </div>
   );
 };
