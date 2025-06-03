@@ -20,7 +20,7 @@ export default function PodPage() {
         getResourceId={(po) => `${po.metadata.namespace}/${po.metadata.name}`}
         getResourceStatus={podStatus}
         onResourceSelect={(id) => setSelectedPod(podsData[id] || null)}
-        selectedResourceId={selectedPod?.metadata.name}
+        selectedResourceId={`${selectedPod?.metadata.namespace}/${selectedPod?.metadata.name}`}
         resourceTypeName="pod"
         urlResourceParam="pod"
         urlFilterParam="podFilter"
