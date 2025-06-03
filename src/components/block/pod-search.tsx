@@ -1,130 +1,118 @@
-import type { NodeObject } from "@/lib/kuview";
+import type { PodObject } from "@/lib/kuview";
 import { useState, useMemo, useEffect } from "react";
 import {
-  nodeStatus,
+  podStatus,
   Status,
   STATUS_COLORS,
   OVERVIEW_STATUS_ORDER,
 } from "@/lib/status";
 
-interface NodeSearchProps {
-  nodes: NodeObject[];
-  onNodeSelect?: (nodeName: string) => void;
-  selectedNodeName?: string;
+interface PodSearchProps {
+  pods: PodObject[];
+  onPodSelect?: (podName: string) => void;
+  selectedPodNN?: string;
 }
 
-export default function NodeSearch(props: NodeSearchProps) {
-  const { nodes, onNodeSelect, selectedNodeName } = props;
+export default function PodSearch({
+  pods,
+  onPodSelect,
+  selectedPodNN,
+}: PodSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStatuses, setSelectedStatuses] = useState<Status[]>([]);
   const itemsPerPage = 100;
 
-  // Nodes filtered by text search query (name or label)
-  const nodesMatchingSearchQuery = useMemo(() => {
+  // Pods filtered by text search query (name or label)
+  const podsMatchingSearchQuery = useMemo(() => {
     const trimmedSearchQuery = searchQuery.trim().toLowerCase();
     if (!trimmedSearchQuery) {
-      return nodes;
+      return pods;
     }
-    return nodes.filter((node) => {
-      const nameMatch = node.metadata.name
+    return pods.filter((pod) => {
+      const nameMatch = pod.metadata.name
         .toLowerCase()
         .includes(trimmedSearchQuery);
-      const labelMatch = Object.values(node.metadata.labels || {}).some(
+      const labelMatch = Object.values(pod.metadata.labels || {}).some(
         (labelValue) =>
           String(labelValue).toLowerCase().includes(trimmedSearchQuery),
       );
       return nameMatch || labelMatch;
     });
-  }, [nodes, searchQuery]);
+  }, [pods, searchQuery]);
 
-  // Calculate counts for each status based on nodesMatchingSearchQuery
+  // Calculate counts for each status based on podsMatchingSearchQuery
   const statusCounts = useMemo(() => {
     const counts: Record<Status, number> = OVERVIEW_STATUS_ORDER.reduce(
       (acc, status) => ({ ...acc, [status]: 0 }),
       {} as Record<Status, number>,
     );
-    nodesMatchingSearchQuery.forEach((node) => {
-      const status = nodeStatus(node);
+    podsMatchingSearchQuery.forEach((pod) => {
+      const status = podStatus(pod);
       if (counts[status] !== undefined) {
         counts[status]++;
       }
     });
     return counts;
-  }, [nodesMatchingSearchQuery]);
+  }, [podsMatchingSearchQuery]);
 
-  // Filter nodes based on selected statuses
-  const filteredNodes = useMemo(() => {
+  // Filter pods based on selected statuses
+  const filteredPods = useMemo(() => {
     if (selectedStatuses.length === 0) {
-      return nodesMatchingSearchQuery;
+      return podsMatchingSearchQuery;
     }
-    return nodesMatchingSearchQuery.filter((node) =>
-      selectedStatuses.includes(nodeStatus(node)),
+    return podsMatchingSearchQuery.filter((pod) =>
+      selectedStatuses.includes(podStatus(pod)),
     );
-  }, [nodesMatchingSearchQuery, selectedStatuses]);
+  }, [podsMatchingSearchQuery, selectedStatuses]);
 
-  // Calculate nodes for the current page
-  const paginatedNodes = useMemo(() => {
+  // Calculate pods for the current page
+  const paginatedPods = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return filteredNodes.slice(startIndex, endIndex);
-  }, [filteredNodes, currentPage, itemsPerPage]);
+    return filteredPods.slice(startIndex, endIndex);
+  }, [filteredPods, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredNodes.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredPods.length / itemsPerPage);
 
-  const handleNodeSelectInternal = (nodeName: string) => {
+  const handlePodSelectInternal = (podName: string) => {
+    onPodSelect?.(podName);
     const params = new URLSearchParams(window.location.search);
-    if (nodeName) {
-      params.set("node", nodeName);
+    if (podName) {
+      params.set("pod", podName);
     } else {
-      params.delete("node");
+      params.delete("pod");
     }
     history.pushState(null, "", `?${params.toString()}`);
-    if (nodeName !== searchQuery) {
-      setSearchQuery(nodeName);
-    }
   };
 
-  // Get node name from URL, and set it as the search query
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const nodeNameFromUrl = params.get("node");
-    if (nodeNameFromUrl) setSearchQuery(nodeNameFromUrl);
-  }, []);
+    const podNNFromUrl = params.get("pod");
+    if (podNNFromUrl && onPodSelect) {
+      console.log("podNNFromUrl", podNNFromUrl);
+      onPodSelect(podNNFromUrl);
+    }
 
-  // Get node filter from URL, and set it as the selected statuses
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const nodeFilterFromUrl = params.get("nodeFilter");
-    if (nodeFilterFromUrl) {
-      const statuses = nodeFilterFromUrl.split(",") as Status[];
+    const podFilterFromUrl = params.get("podFilter");
+    if (podFilterFromUrl) {
+      const statuses = podFilterFromUrl.split(",") as Status[];
       setSelectedStatuses(
         statuses.filter((s) => OVERVIEW_STATUS_ORDER.includes(s)),
       );
     }
-  }, []);
+  }, [onPodSelect]);
 
-  // If the search query is a node name, select the node
-  useEffect(() => {
-    if (nodes.find((node) => node.metadata.name === searchQuery)) {
-      onNodeSelect?.(searchQuery);
-    } else {
-      onNodeSelect?.("");
-    }
-  }, [searchQuery, nodes, onNodeSelect]);
-
-  // If the selected statuses change, update the URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (selectedStatuses.length > 0) {
-      params.set("nodeFilter", selectedStatuses.join(","));
+      params.set("podFilter", selectedStatuses.join(","));
     } else {
-      params.delete("nodeFilter");
+      params.delete("podFilter");
     }
     history.pushState(null, "", `?${params.toString()}`);
   }, [selectedStatuses]);
 
-  // Pagination
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
@@ -150,7 +138,7 @@ export default function NodeSearch(props: NodeSearchProps) {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search nodes by name..."
+          placeholder="Search pods by name..."
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
         />
         {searchQuery && (
@@ -166,7 +154,7 @@ export default function NodeSearch(props: NodeSearchProps) {
       {/* Results Count & Status Filter */}
       <div className="flex items-center justify-between text-sm text-gray-500">
         <div>
-          Showing {paginatedNodes.length} of {filteredNodes.length} nodes
+          Showing {paginatedPods.length} of {filteredPods.length} pods
           {searchQuery && ` matching "${searchQuery}"`}
           {selectedStatuses.length > 0 && ` (filtered by status)`}
         </div>
@@ -199,24 +187,22 @@ export default function NodeSearch(props: NodeSearchProps) {
         )}
       </div>
 
-      {/* Node List */}
-      {filteredNodes.length === 0 ? (
+      {/* Pod List */}
+      {filteredPods.length === 0 ? (
         <div className="bg-muted/50 rounded-xl p-8 text-center">
           <p className="text-gray-500">
-            {searchQuery
-              ? "No nodes match your search."
-              : "No nodes to display."}
+            {searchQuery ? "No pods match your search." : "No pods to display."}
           </p>
         </div>
       ) : (
         <div className="border border-gray-200 rounded-lg overflow-hidden h-[200px] overflow-y-auto">
-          {paginatedNodes.map((node) => (
+          {paginatedPods.map((pod) => (
             <Row
-              key={node.metadata.name}
-              node={node}
-              nodeCurrentStatus={nodeStatus(node)}
-              selectedNodeName={selectedNodeName}
-              onNodeSelect={handleNodeSelectInternal}
+              key={`${pod.metadata.namespace}/${pod.metadata.name}`}
+              pod={pod}
+              podCurrentStatus={podStatus(pod)}
+              selectedPodNN={selectedPodNN}
+              onPodSelect={handlePodSelectInternal}
             />
           ))}
         </div>
@@ -246,27 +232,32 @@ export default function NodeSearch(props: NodeSearchProps) {
 }
 
 interface RowProps {
-  node: NodeObject;
-  nodeCurrentStatus: Status;
-  selectedNodeName?: string;
-  onNodeSelect?: (nodeName: string) => void;
+  pod: PodObject;
+  podCurrentStatus: Status;
+  selectedPodNN?: string;
+  onPodSelect?: (podName: string) => void;
 }
 
 const Row = ({
-  node,
-  nodeCurrentStatus,
-  selectedNodeName,
-  onNodeSelect,
+  pod,
+  podCurrentStatus,
+  selectedPodNN,
+  onPodSelect,
 }: RowProps) => {
-  const isSelected = selectedNodeName === node.metadata.name;
-  const statusColor = STATUS_COLORS[nodeCurrentStatus]?.color || "bg-gray-500";
+  const isSelected =
+    selectedPodNN === `${pod.metadata.namespace}/${pod.metadata.name}`;
+  const statusColor = STATUS_COLORS[podCurrentStatus]?.color || "bg-gray-500";
 
   return (
     <div
       className={`flex items-center justify-between px-4 py-2 border-b border-gray-100 cursor-pointer transition-colors ${
         isSelected ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"
       }`}
-      onClick={() => onNodeSelect?.(isSelected ? "" : node.metadata.name)}
+      onClick={() =>
+        onPodSelect?.(
+          isSelected ? "" : `${pod.metadata.namespace}/${pod.metadata.name}`,
+        )
+      }
     >
       <div className="flex items-center">
         <div
@@ -277,7 +268,7 @@ const Row = ({
             isSelected ? "text-blue-700 font-medium" : "text-gray-900"
           }`}
         >
-          {node.metadata.name}
+          {pod.metadata.namespace}/{pod.metadata.name}
         </span>
       </div>
     </div>

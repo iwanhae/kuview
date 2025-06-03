@@ -1,5 +1,5 @@
 import { useKuview } from "@/hooks/useKuview";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import NodeSearch from "@/components/block/node-search";
 
 interface Node {
@@ -14,10 +14,13 @@ export default function Node() {
   const nodes = useKuview("v1/Node");
   const [node, setNode] = useState<Node | null>(null);
 
-  const handleNodeSelect = (nodeName: string) => {
-    console.log(nodeName, nodes);
-    setNode(nodes[nodeName]);
-  };
+  const handleNodeSelect = useCallback(
+    (nodeName: string) => {
+      console.log(nodeName, nodes);
+      setNode(nodes[nodeName]);
+    },
+    [nodes],
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0">

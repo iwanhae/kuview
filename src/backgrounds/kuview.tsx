@@ -1,9 +1,6 @@
 import type { KuviewEvent } from "@/lib/kuview";
-import {
-  handleEvent,
-  useGVKSyncHook,
-  useKubernetesSyncHook,
-} from "@/lib/kuviewAtom";
+import { handleEvent, kubernetesAtom, useGVKSyncHook } from "@/lib/kuviewAtom";
+import { useAtomValue } from "jotai";
 import { useEffect } from "react";
 
 interface WindowWithKuview extends Window {
@@ -54,8 +51,8 @@ export default function KuviewBackground() {
 }
 
 function SyncKubernetes() {
-  // Sync Kubernetes objects from the server
-  const gvks = useKubernetesSyncHook();
+  const kubernetes = useAtomValue(kubernetesAtom);
+  const gvks = Object.keys(kubernetes);
   return (
     <>
       {gvks.map((gvk) => (

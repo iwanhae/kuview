@@ -26,33 +26,6 @@ export function handleEvent(event: KuviewEvent) {
   }
 }
 
-export function useKubernetesSyncHook(): Array<string> {
-  const [kubernetes, setKubernetes] = useAtom(kubernetesAtom);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // make a list of distinct gvks in PENDING_CHANGES
-      const gvks = new Set<string>();
-      PENDING_CHANGES.forEach((operation) => {
-        const { object } = operation;
-        const { kind, apiVersion } = object;
-        gvks.add(`${apiVersion}/${kind}`);
-      });
-
-      // create a new GVK atom if it doesn't exist in kubernetes atom
-      gvks.forEach((gvk) => {
-        if (!kubernetes[gvk]) {
-          kubernetes[gvk] = atom<Record<string, KubernetesObject>>({});
-        }
-      });
-      setKubernetes({ ...kubernetes });
-    }, DEBOUNCE_MS);
-    return () => clearInterval(interval);
-  }, [kubernetes, setKubernetes])
-
-  return Object.keys(kubernetes);
-}
-
 export function useGVKSyncHook(gvk: string) {
   const kubernetes = useAtomValue(kubernetesAtom);
   const objectAtom = kubernetes[gvk];
@@ -62,6 +35,7 @@ export function useGVKSyncHook(gvk: string) {
     const interval = setInterval(() => {
       const operations = PENDING_CHANGES.
         filter((operation) => `${operation.object.apiVersion}/${operation.object.kind}` === gvk);
+      if (operations.length == 0) return
 
       operations.forEach((operation) => {
         const { type, object } = operation;
@@ -78,6 +52,14 @@ export function useGVKSyncHook(gvk: string) {
         }
       });
 
+      for (const operation of operations) {
+        const index = PENDING_CHANGES.findIndex((o) => o.object.metadata.uid === operation.object.metadata.uid)
+        if (index !== -1) {
+          PENDING_CHANGES.splice(index, 1);
+        }
+      }
+
+      console.log("RESOURCE_UPDATE", gvk, operations);
       setObjects({ ...objects });
     }, DEBOUNCE_MS);
     return () => clearInterval(interval);
