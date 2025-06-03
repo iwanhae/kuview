@@ -104,17 +104,8 @@ export default function SearchComponent<T extends BaseKubeObject>(
       params.delete(urlResourceParam);
     }
     history.pushState(null, "", `?${params.toString()}`);
-    if (resourceId !== searchQuery) {
-      setSearchQuery(resourceId);
-    }
+    onResourceSelect?.(resourceId);
   };
-
-  // Get resource ID from URL, and set it as the search query
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const resourceIdFromUrl = params.get(urlResourceParam);
-    if (resourceIdFromUrl) setSearchQuery(resourceIdFromUrl);
-  }, [urlResourceParam]);
 
   // Get resource filter from URL, and set it as the selected statuses
   useEffect(() => {
@@ -128,14 +119,17 @@ export default function SearchComponent<T extends BaseKubeObject>(
     }
   }, [urlFilterParam]);
 
-  // If the search query is a resource ID, select the resource
+  // Handle URL resource selection independently from search query
   useEffect(() => {
-    if (resources.find((res) => getResourceId(res) === searchQuery)) {
-      onResourceSelect?.(searchQuery);
-    } else {
-      onResourceSelect?.("");
+    const params = new URLSearchParams(window.location.search);
+    const resourceIdFromUrl = params.get(urlResourceParam);
+    if (
+      resourceIdFromUrl &&
+      resources.find((res) => getResourceId(res) === resourceIdFromUrl)
+    ) {
+      onResourceSelect?.(resourceIdFromUrl);
     }
-  }, [searchQuery, resources, onResourceSelect, getResourceId]);
+  }, [urlResourceParam, resources, onResourceSelect, getResourceId]);
 
   // If the selected statuses change, update the URL
   useEffect(() => {
