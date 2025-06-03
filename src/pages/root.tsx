@@ -1,4 +1,6 @@
 import CardResourceOverview from "@/components/block/card-resource-overview";
+import ClusterResourceOverview from "@/components/block/cluster-resource-overview";
+import NodesResourceTable from "@/components/block/nodes-resource-table";
 import { useKuview } from "@/hooks/useKuview";
 import { PREFIX } from "@/lib/const";
 import type { Status } from "@/lib/status";
@@ -12,6 +14,11 @@ export default function Root() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      {/* Cluster Resource Overview */}
+      <div className="flex gap-6 w-full justify-evenly">
+        <ClusterResourceOverview />
+        <NodesResourceTable />
+      </div>
       {/* Resource Overview Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Nodes */}
