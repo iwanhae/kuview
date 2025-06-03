@@ -4,5 +4,7 @@
       "GOOS": "js",
       "GOARCH": "wasm"
     }
-  }
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
 }
