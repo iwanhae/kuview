@@ -8,7 +8,7 @@ export default function Root() {
   const nodes = useKuview("v1/Node");
   const pods = useKuview("v1/Pod");
   const namespaces = useKuview("v1/Namespace");
-  const services = useKuview("v1/Service");
+  // const services = useKuview("v1/Service");
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">

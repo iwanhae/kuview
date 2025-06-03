@@ -5,17 +5,21 @@ import { useEffect } from "react";
 
 const tmpAtom = atom<Record<string, KubernetesObject>>({});
 
-export function useKuview<T extends GVK>(gvk: T): Record<string, KuviewObjectType<T>> {
+export function useKuview<T extends GVK>(
+  gvk: T,
+): Record<string, KuviewObjectType<T>> {
   const [kubernetes, setKubernetes] = useAtom(kubernetesAtom);
 
   useEffect(() => {
     if (!kubernetes[gvk]) {
       kubernetes[gvk] = atom<Record<string, KubernetesObject>>({});
     }
-    setKubernetes({ ...kubernetes })
-  }, [])
+    setKubernetes({ ...kubernetes });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-
-  return useAtomValue(kubernetes[gvk] ?? tmpAtom) as Record<string, KuviewObjectType<T>>;
+  return useAtomValue(kubernetes[gvk] ?? tmpAtom) as Record<
+    string,
+    KuviewObjectType<T>
+  >;
 }
-

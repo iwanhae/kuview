@@ -9,9 +9,9 @@ interface BaseKubeObject {
     name: string;
     namespace?: string;
     labels?: Record<string, string | undefined>;
-    [key: string]: any; // Allow other metadata fields
+    [key: string]: unknown; // Allow other metadata fields
   };
-  [key: string]: any; // Allow other top-level fields
+  [key: string]: unknown; // Allow other top-level fields
 }
 
 interface SearchComponentProps<T extends BaseKubeObject> {
