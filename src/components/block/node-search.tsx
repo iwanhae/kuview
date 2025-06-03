@@ -1,5 +1,5 @@
 import type { NodeObject } from "@/lib/kuview";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 interface NodeSearchProps {
   nodes: NodeObject[];
@@ -36,6 +36,25 @@ export default function NodeSearch({
   }, [filteredNodes, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredNodes.length / itemsPerPage);
+
+  const handleNodeSelectInternal = (nodeName: string) => {
+    onNodeSelect?.(nodeName);
+    const params = new URLSearchParams(window.location.search);
+    if (nodeName) {
+      params.set("node", nodeName);
+    } else {
+      params.delete("node");
+    }
+    history.pushState(null, "", `?${params.toString()}`);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nodeNameFromUrl = params.get("node");
+    if (nodeNameFromUrl && onNodeSelect) {
+      onNodeSelect(nodeNameFromUrl);
+    }
+  }, [onNodeSelect]);
 
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -95,7 +114,7 @@ export default function NodeSearch({
               key={node.metadata.name}
               node={node}
               selectedNodeName={selectedNodeName}
-              onNodeSelect={onNodeSelect}
+              onNodeSelect={handleNodeSelectInternal}
             />
           ))}
         </div>
@@ -138,7 +157,7 @@ const Row = ({ node, selectedNodeName, onNodeSelect }: RowProps) => {
       className={`flex items-center px-4 py-2 border-b border-gray-100 cursor-pointer transition-colors ${
         isSelected ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"
       }`}
-      onClick={() => onNodeSelect?.(node.metadata.name)}
+      onClick={() => onNodeSelect?.(isSelected ? "" : node.metadata.name)}
     >
       <span
         className={`text-sm font-mono ${
