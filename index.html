@@ -11,22 +11,20 @@
 <body>
   <script>
     console.log('[Main] Initializing Web Worker for KuView WASM.');
-    const worker = new Worker('/static/worker.js'); // Ensure worker.js is in public directory
+    const worker = new Worker('/static/worker.js');
 
     window.kuviewEventQueue = [];
 
     // Temporary event handler to queue events before React is fully ready
+    // It will be replaced by the React event handler when React is fully ready
     window.kuview = (event) => {
       console.log('[Main] Queuing event via temp window.kuview:', event);
       window.kuviewEventQueue.push(event);
     };
 
     worker.onmessage = (e) => {
-      // Pass the event from the worker to the current window.kuview handler
-      // This allows React to take over window.kuview when it mounts
       if (e.data && e.data.type === 'WORKER_ERROR') {
         console.error('[Main] Received error from worker:', e.data.error);
-        // Handle worker error appropriately, e.g., display a message to the user
         const rootDiv = document.getElementById('root');
         if (rootDiv) {
           rootDiv.innerHTML =
@@ -37,18 +35,14 @@
         return;
       }
 
-      if (typeof window.kuview === 'function') {
-        window.kuview(e.data);
-      } else {
-        // Fallback: should ideally be caught by the queueing version of window.kuview
-        console.warn('[Main] window.kuview not a function, pushing to queue directly.');
-        window.kuviewEventQueue.push(e.data);
+      if (e.data.length > 0) console.log('Received', e.data.length, 'events from worker');
+      for (const event of e.data) {
+        window.kuview(event);
       }
     };
 
     worker.onerror = (error) => {
       console.error('[Main] Error from worker:', JSON.stringify(error));
-      // You might want to display a user-friendly error message here too
       const rootDiv = document.getElementById('worker-error');
       if (rootDiv) {
         rootDiv.innerHTML =
@@ -58,7 +52,6 @@
       }
     };
 
-    // Initialize the worker by sending the HOST information
     worker.postMessage({
       type: 'INIT_WORKER',
       host: `${location.protocol}//${location.host}`

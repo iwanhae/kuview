@@ -1,9 +1,15 @@
 importScripts('/static/wasm_exec.js');
 
+BUFFER = [];
+
+setInterval(() => {
+  // Send all buffered events
+  self.postMessage(BUFFER);
+  BUFFER = [];
+}, 100); // every 100ms
+
 self.send = (event) => {
-  setTimeout(() => {
-    self.postMessage(event);
-  }, 0);
+  BUFFER.push(event);
 }
 
 self.onmessage = async (event) => {
