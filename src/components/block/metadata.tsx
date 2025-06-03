@@ -30,7 +30,7 @@ export default function MetadataComponent({ metadata }: MetadataProps) {
             <label className="text-sm font-medium text-muted-foreground">
               UID
             </label>
-            <p className="text-sm font-mono text-xs">{metadata.uid}</p>
+            <p className="text-sm font-mono">{metadata.uid}</p>
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground">

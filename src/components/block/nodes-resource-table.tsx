@@ -2,7 +2,8 @@ import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject } from "@/lib/kuview";
 import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
 import { nodeStatus, Status } from "@/lib/status";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import ResourceCell from "./resource-cell";
 import StatusBadge from "./status-badge";
+import { useState, useMemo } from "react";
 
 interface NodeResourceData {
   node: NodeObject;
@@ -38,76 +40,114 @@ function calculateNodeResourceData(
   nodes: Record<string, NodeObject>,
   pods: Record<string, PodObject>,
 ): NodeResourceData[] {
-  return Object.values(nodes).map((node) => {
-    const nodePods = Object.values(pods).filter(
-      (pod) => pod.spec.nodeName === node.metadata.name,
-    );
+  const nodeResourceMap: Record<string, NodeResourceData> = {};
 
+  // Initialize resource data for each node
+  Object.values(nodes).forEach((node) => {
     const capacity = node.status.capacity || {};
     const cpuCapacity = parseCpu(capacity.cpu || "0");
     const memoryCapacity = parseMemory(capacity.memory || "0");
 
-    let cpuRequests = 0;
-    let cpuLimits = 0;
-    let memoryRequests = 0;
-    let memoryLimits = 0;
-
-    nodePods.forEach((pod) => {
-      pod.spec.containers.forEach((container) => {
-        const resources = container.resources || {};
-
-        if (resources.requests) {
-          cpuRequests += parseCpu(resources.requests.cpu || "0");
-          memoryRequests += parseMemory(resources.requests.memory || "0");
-        }
-
-        if (resources.limits) {
-          cpuLimits += parseCpu(resources.limits.cpu || "0");
-          memoryLimits += parseMemory(resources.limits.memory || "0");
-        }
-      });
-    });
-
-    return {
+    nodeResourceMap[node.metadata.name] = {
       node,
-      podCount: nodePods.length,
+      podCount: 0,
       cpu: {
         capacity: cpuCapacity,
-        requests: cpuRequests,
-        limits: cpuLimits,
-        requestsPercentage:
-          cpuCapacity > 0 ? (cpuRequests / cpuCapacity) * 100 : 0,
-        limitsPercentage: cpuCapacity > 0 ? (cpuLimits / cpuCapacity) * 100 : 0,
+        requests: 0,
+        limits: 0,
+        requestsPercentage: 0,
+        limitsPercentage: 0,
       },
       memory: {
         capacity: memoryCapacity,
-        requests: memoryRequests,
-        limits: memoryLimits,
-        requestsPercentage:
-          memoryCapacity > 0 ? (memoryRequests / memoryCapacity) * 100 : 0,
-        limitsPercentage:
-          memoryCapacity > 0 ? (memoryLimits / memoryCapacity) * 100 : 0,
+        requests: 0,
+        limits: 0,
+        requestsPercentage: 0,
+        limitsPercentage: 0,
       },
       status: nodeStatus(node),
     };
+  });
+
+  // Iterate over pods once to aggregate resource usage
+  Object.values(pods).forEach((pod) => {
+    const nodeName = pod.spec.nodeName;
+    if (nodeName && nodeResourceMap[nodeName]) {
+      const nodeData = nodeResourceMap[nodeName];
+      nodeData.podCount += 1;
+
+      pod.spec.containers.forEach((container) => {
+        const resources = container.resources || {};
+        if (resources.requests) {
+          nodeData.cpu.requests += parseCpu(resources.requests.cpu || "0");
+          nodeData.memory.requests += parseMemory(
+            resources.requests.memory || "0",
+          );
+        }
+        if (resources.limits) {
+          nodeData.cpu.limits += parseCpu(resources.limits.cpu || "0");
+          nodeData.memory.limits += parseMemory(resources.limits.memory || "0");
+        }
+      });
+    }
+  });
+
+  // Calculate percentages
+  return Object.values(nodeResourceMap).map((nodeData) => {
+    const { cpu, memory } = nodeData;
+    cpu.requestsPercentage =
+      cpu.capacity > 0 ? (cpu.requests / cpu.capacity) * 100 : 0;
+    cpu.limitsPercentage =
+      cpu.capacity > 0 ? (cpu.limits / cpu.capacity) * 100 : 0;
+    memory.requestsPercentage =
+      memory.capacity > 0 ? (memory.requests / memory.capacity) * 100 : 0;
+    memory.limitsPercentage =
+      memory.capacity > 0 ? (memory.limits / memory.capacity) * 100 : 0;
+    return nodeData;
   });
 }
 
 export default function NodesResourceTable() {
   const nodes = useKuview("v1/Node");
   const pods = useKuview("v1/Pod");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const nodeResourceData = calculateNodeResourceData(nodes, pods);
+  const nodeResourceData = useMemo(
+    () => {
+      console.log("Recalculating nodeResourceData");
+      return calculateNodeResourceData(nodes, pods);
+    }, // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      Object.values(nodes)
+        .map(
+          (n) =>
+            `${n.metadata.name}_${n.status.capacity?.cpu}_${n.status.capacity?.memory}`,
+        )
+        .join(","),
+      pods,
+    ],
+  );
 
   // Sort by highest CPU usage (limits percentage)
-  const sortedData = nodeResourceData.sort(
-    (a, b) => b.cpu.limitsPercentage - a.cpu.limitsPercentage,
-  );
+  const sortedAndFilteredData = useMemo(() => {
+    const filtered = nodeResourceData.filter((data) =>
+      data.node.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+    return filtered
+      .sort((a, b) => b.cpu.limitsPercentage - a.cpu.limitsPercentage)
+      .slice(0, 10);
+  }, [nodeResourceData, searchTerm]);
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Nodes Resource Usage</CardTitle>
+        <Input
+          type="search"
+          placeholder="Nodes Resource Usage"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </CardHeader>
       <CardContent>
         <Table>
@@ -122,8 +162,8 @@ export default function NodesResourceTable() {
               <TableHead>Memory Limits</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {sortedData.map((data) => (
+          <TableBody className="overflow-y-auto max-h-[300px]">
+            {sortedAndFilteredData.map((data) => (
               <TableRow key={data.node.metadata.name}>
                 <TableCell className="font-medium">
                   {data.node.metadata.name}
