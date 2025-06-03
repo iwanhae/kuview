@@ -10,6 +10,54 @@ export enum Status {
   Terminating = "Terminating",
 }
 
+export const STATUS_COLORS = {
+  [Status.Running]: {
+    color: "bg-emerald-500",
+    bgColor: "bg-emerald-50",
+    textColor: "text-emerald-700",
+    severity: 1,
+  },
+  [Status.Done]: {
+    color: "bg-blue-500",
+    bgColor: "bg-blue-50",
+    textColor: "text-blue-700",
+    severity: 0,
+  },
+  [Status.Pending]: {
+    color: "bg-gray-500",
+    bgColor: "bg-gray-50",
+    textColor: "text-gray-700",
+    severity: 2,
+  },
+  [Status.Warning]: {
+    color: "bg-amber-500",
+    bgColor: "bg-amber-50",
+    textColor: "text-amber-700",
+    severity: 4,
+  },
+  [Status.Error]: {
+    color: "bg-red-500",
+    bgColor: "bg-red-50",
+    textColor: "text-red-700",
+    severity: 5,
+  },
+  [Status.Terminating]: {
+    color: "bg-orange-500",
+    bgColor: "bg-orange-50",
+    textColor: "text-orange-700",
+    severity: 3,
+  },
+} as const;
+
+export const OVERVIEW_STATUS_ORDER: Status[] = [
+  Status.Running,
+  Status.Pending,
+  Status.Terminating,
+  Status.Done,
+  Status.Warning,
+  Status.Error,
+];
+
 export function nodeStatus(node: NodeObject) {
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (node.metadata.deletionTimestamp) {
@@ -64,7 +112,7 @@ export function podStatus(pod: PodObject) {
   if (pod.status.containerStatuses?.some(
     status => status.state.waiting?.reason === "CrashLoopBackOff"
   )) {
-    return Status.Warning;
+    return Status.Error;
   }
 
   // Warning: if some of pod's container statuses's lastState.terminated is not null
@@ -75,7 +123,7 @@ export function podStatus(pod: PodObject) {
       dayjs(status.lastState.terminated.finishedAt).
         isAfter(dayjs().subtract(10, "minute")))
   ) {
-    return Status.Warning;
+    return Status.Error;
   }
 
   // Error - Unknown: if pod's phase is "Unknown", return Error
