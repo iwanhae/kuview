@@ -18,7 +18,7 @@ import StatusBadge from "./status-badge";
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { PREFIX } from "@/lib/const";
-import { RefreshCcw, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 interface NodeResourceData {
   node: NodeObject;
@@ -128,7 +128,8 @@ export default function NodesResourceTable() {
   // Subsequent updates will only happen via the refresh button.
   useEffect(() => {
     setDataForCalculation({ nodes: rawNodes, pods: rawPods });
-  }, [rawNodes, rawPods]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = () => {
     setDataForCalculation({ nodes: rawNodes, pods: rawPods });

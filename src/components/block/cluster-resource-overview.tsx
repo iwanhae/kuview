@@ -87,7 +87,8 @@ export default function ClusterResourceOverview() {
 
   useEffect(() => {
     setDataForCalculation({ nodes: rawNodes, pods: rawPods });
-  }, [rawNodes, rawPods]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = () => {
     setDataForCalculation({ nodes: rawNodes, pods: rawPods });
