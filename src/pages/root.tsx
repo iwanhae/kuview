@@ -1,5 +1,6 @@
 import CardResourceOverview from "@/components/block/card-resource-overview";
 import { useKuview } from "@/hooks/useKuview";
+import { PREFIX } from "@/lib/const";
 import type { Status } from "@/lib/status";
 import { namespaceStatus, nodeStatus, podStatus } from "@/lib/status";
 
@@ -15,6 +16,7 @@ export default function Root() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Nodes */}
         <CardResourceOverview
+          href={`${PREFIX}/nodes`}
           resourceName="Nodes"
           status={Object.values(nodes).reduce(
             (acc, node) => {
@@ -27,6 +29,7 @@ export default function Root() {
         />
         {/* Namespaces */}
         <CardResourceOverview
+          href={`${PREFIX}/namespaces`}
           resourceName="Namespaces"
           status={Object.values(namespaces).reduce(
             (acc, namespace) => {
@@ -39,6 +42,7 @@ export default function Root() {
         />
         {/* Pods */}
         <CardResourceOverview
+          href={`${PREFIX}/pods`}
           resourceName="Pods"
           status={Object.values(pods).reduce(
             (acc, pod) => {

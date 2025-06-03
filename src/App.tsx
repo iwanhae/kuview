@@ -1,4 +1,3 @@
-import { AppSidebar } from "@/components/app-sidebar";
 import { Route, Switch } from "wouter";
 import {
   SidebarInset,
@@ -11,6 +10,7 @@ import Pod from "./pages/pod";
 import KuviewBackground from "./backgrounds/kuview";
 import Debug from "./pages/debug";
 import { PREFIX } from "./lib/const";
+import { AppSidebar } from "./components/app-sidebar";
 
 export default function Page() {
   return (
@@ -25,8 +25,8 @@ export default function Page() {
         </header>
         <Switch>
           <Route path={`${PREFIX}/`} component={Root} />
-          <Route path={`${PREFIX}/node`} component={Node} />
-          <Route path={`${PREFIX}/pod`} component={Pod} />
+          <Route path={`${PREFIX}/nodes`} component={Node} />
+          <Route path={`${PREFIX}/pods`} component={Pod} />
           <Route path={`${PREFIX}/debug`} component={Debug} />
         </Switch>
       </SidebarInset>

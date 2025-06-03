@@ -18,7 +18,7 @@ export function NavMain({
   items: {
     title: string;
     url: string;
-    icon?: LucideIcon;
+    icon: LucideIcon;
     isActive?: boolean;
   }[];
 }) {
@@ -34,12 +34,12 @@ export function NavMain({
             className="group/collapsible"
           >
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip={item.title}>
-                <Link to={item.url} className="flex items-center gap-2">
-                  {item.icon && <item.icon />}
+              <Link to={item.url}>
+                <SidebarMenuButton tooltip={item.title}>
+                  <item.icon />
                   <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
           </Collapsible>
         ))}

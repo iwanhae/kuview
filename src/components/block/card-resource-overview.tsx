@@ -1,8 +1,9 @@
 import { Status } from "@/lib/status";
+import { Link } from "wouter";
 
 interface Props {
   resourceName: string;
-
+  href: string;
   status: Record<Status, number>;
 }
 
@@ -73,76 +74,78 @@ export default function CardResourceOverview(props: Props) {
 
   return (
     <div className="group bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">
-            {props.resourceName}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Total: {total} resources
-          </p>
-        </div>
-        <div className="flex items-center space-x-1">
-          {/* Status indicator */}
-          <div
-            className={`w-2 h-2 rounded-full animate-pulse ${
-              error > 0
-                ? "bg-red-500"
-                : warning > 0
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-            }`}
-          />
-        </div>
-      </div>
-
-      {/* Color Legend */}
-      {total > 0 && (
-        <div className="mb-4">
-          <div className="flex flex-wrap gap-3">
-            {healthStats
-              .filter((stat) => stat.value > 0)
-              .map((stat, index) => (
-                <div key={index} className="flex items-center space-x-1">
-                  <div className={`w-2 h-2 rounded-full ${stat.color}`} />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {stat.label} ({stat.value})
-                  </span>
-                </div>
-              ))}
+      <Link href={props.href}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">
+              {props.resourceName}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Total: {total} resources
+            </p>
+          </div>
+          <div className="flex items-center space-x-1">
+            {/* Status indicator */}
+            <div
+              className={`w-2 h-2 rounded-full animate-pulse ${
+                error > 0
+                  ? "bg-red-500"
+                  : warning > 0
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+              }`}
+            />
           </div>
         </div>
-      )}
 
-      {/* Progress Bar */}
-      {total > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Health Overview
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {total} total
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-            <div className="h-full flex">
-              {healthStats.map(
-                (stat, index) =>
-                  stat.value > 0 && (
-                    <div
-                      key={index}
-                      className={`${stat.color} transition-all duration-500 ease-out`}
-                      style={{ width: `${stat.percentage}%` }}
-                      title={`${stat.label}: ${stat.value}`}
-                    />
-                  ),
-              )}
+        {/* Color Legend */}
+        {total > 0 && (
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-3">
+              {healthStats
+                .filter((stat) => stat.value > 0)
+                .map((stat, index) => (
+                  <div key={index} className="flex items-center space-x-1">
+                    <div className={`w-2 h-2 rounded-full ${stat.color}`} />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {stat.label} ({stat.value})
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Progress Bar */}
+        {total > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Health Overview
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {total} total
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+              <div className="h-full flex">
+                {healthStats.map(
+                  (stat, index) =>
+                    stat.value > 0 && (
+                      <div
+                        key={index}
+                        className={`${stat.color} transition-all duration-500 ease-out`}
+                        style={{ width: `${stat.percentage}%` }}
+                        title={`${stat.label}: ${stat.value}`}
+                      />
+                    ),
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Link>
     </div>
   );
 }

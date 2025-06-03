@@ -14,12 +14,12 @@ const data = {
     },
     {
       title: "Node",
-      url: `${PREFIX}/node`,
+      url: `${PREFIX}/nodes`,
       icon: Server,
     },
     {
       title: "Pod",
-      url: `${PREFIX}/pod`,
+      url: `${PREFIX}/pods`,
       icon: Rocket,
     },
   ],
