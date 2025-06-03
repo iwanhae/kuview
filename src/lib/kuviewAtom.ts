@@ -59,7 +59,6 @@ export function useGVKSyncHook(gvk: string) {
         }
       }
 
-      console.log("RESOURCE_UPDATE", gvk, operations);
       setObjects({ ...objects });
     }, DEBOUNCE_MS);
     return () => clearInterval(interval);

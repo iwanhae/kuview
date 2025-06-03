@@ -15,7 +15,6 @@ export default function Node() {
   const [pod, setPod] = useState<Pod | null>(null);
 
   const handlePodSelect = (podName: string) => {
-    console.log(podName, pods);
     setPod(pods[podName]);
   };
 

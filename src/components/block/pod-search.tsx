@@ -30,7 +30,7 @@ export default function PodSearch({
       return pods;
     }
     return pods.filter((pod) => {
-      const nameMatch = pod.metadata.name
+      const nameMatch = `${pod.metadata.namespace}/${pod.metadata.name}`
         .toLowerCase()
         .includes(trimmedSearchQuery);
       const labelMatch = Object.values(pod.metadata.labels || {}).some(
@@ -76,7 +76,6 @@ export default function PodSearch({
   const totalPages = Math.ceil(filteredPods.length / itemsPerPage);
 
   const handlePodSelectInternal = (podName: string) => {
-    onPodSelect?.(podName);
     const params = new URLSearchParams(window.location.search);
     if (podName) {
       params.set("pod", podName);
@@ -84,14 +83,17 @@ export default function PodSearch({
       params.delete("pod");
     }
     history.pushState(null, "", `?${params.toString()}`);
+    if (podName !== searchQuery) {
+      setSearchQuery(podName);
+    }
   };
 
+  // Get pod NN from URL, and set it as the search query
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const podNNFromUrl = params.get("pod");
-    if (podNNFromUrl && onPodSelect) {
-      console.log("podNNFromUrl", podNNFromUrl);
-      onPodSelect(podNNFromUrl);
+    if (podNNFromUrl) {
+      setSearchQuery(podNNFromUrl);
     }
 
     const podFilterFromUrl = params.get("podFilter");
@@ -101,8 +103,23 @@ export default function PodSearch({
         statuses.filter((s) => OVERVIEW_STATUS_ORDER.includes(s)),
       );
     }
-  }, [onPodSelect]);
+  }, []); // Removed onPodSelect from dependencies
 
+  // If the search query is a pod NN, select the pod
+  useEffect(() => {
+    if (
+      pods.find(
+        (pod) =>
+          `${pod.metadata.namespace}/${pod.metadata.name}` === searchQuery,
+      )
+    ) {
+      onPodSelect?.(searchQuery);
+    } else {
+      onPodSelect?.("");
+    }
+  }, [searchQuery, pods, onPodSelect]);
+
+  // If the selected statuses change, update the URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (selectedStatuses.length > 0) {
