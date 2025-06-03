@@ -14,10 +14,6 @@ export default function Node() {
   const pods = useKuview("v1/Pod");
   const [pod, setPod] = useState<Pod | null>(null);
 
-  const handlePodSelect = (podName: string) => {
-    setPod(pods[podName]);
-  };
-
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
       <div className="flex items-center gap-2">
@@ -27,7 +23,7 @@ export default function Node() {
       {/* Node Search and Selection */}
       <PodSearch
         pods={Object.values(pods)}
-        onPodSelect={handlePodSelect}
+        onPodSelect={(podNN) => setPod(pods[podNN])}
         selectedPodNN={`${pod?.metadata.namespace}/${pod?.metadata.name}`}
       />
     </div>

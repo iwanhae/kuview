@@ -64,3 +64,26 @@ export function useGVKSyncHook(gvk: string) {
     return () => clearInterval(interval);
   }, [objects, setObjects, gvk])
 }
+
+// useKubernetesAtomSyncHook defines a new GVK atom if it doesn't exist in kubernetesAtom but is in PENDING_CHANGES
+export function useKubernetesAtomSyncHook() {
+  const [kubernetes, setKubernetes] = useAtom(kubernetesAtom);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      for (const operation of PENDING_CHANGES) {
+        const { object } = operation;
+        const { kind, apiVersion } = object;
+        const gvk = `${apiVersion}/${kind}`;
+        if (!kubernetes[gvk]) {
+          console.warn("FINDS_UNHANDLED_NEW_GVK", gvk);
+          setKubernetes({
+            ...kubernetes,
+            [gvk]: atom<Record<string, KubernetesObject>>({}),
+          });
+          return;
+        }
+      };
+    }, 10_000); // 10 seconds
+    return () => clearInterval(interval);
+  }, [kubernetes, setKubernetes])
+}

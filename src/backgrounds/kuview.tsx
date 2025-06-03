@@ -1,5 +1,10 @@
 import type { KuviewEvent } from "@/lib/kuview";
-import { handleEvent, kubernetesAtom, useGVKSyncHook } from "@/lib/kuviewAtom";
+import {
+  handleEvent,
+  kubernetesAtom,
+  useGVKSyncHook,
+  useKubernetesAtomSyncHook,
+} from "@/lib/kuviewAtom";
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
 
@@ -51,6 +56,7 @@ export default function KuviewBackground() {
 }
 
 function SyncKubernetes() {
+  useKubernetesAtomSyncHook();
   const kubernetes = useAtomValue(kubernetesAtom);
   const gvks = Object.keys(kubernetes);
   return (
