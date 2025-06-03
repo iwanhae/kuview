@@ -2,7 +2,7 @@ import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject } from "@/lib/kuview";
 import { podStatus, Status } from "@/lib/status";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -51,9 +51,6 @@ export default function NodeOverview({ node }: NodeOverviewProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Overview</CardTitle>
-      </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
