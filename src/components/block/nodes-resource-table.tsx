@@ -136,7 +136,7 @@ export default function NodesResourceTable() {
     );
     return filtered
       .sort((a, b) => b.cpu.limitsPercentage - a.cpu.limitsPercentage)
-      .slice(0, 10);
+      .slice(0, 5);
   }, [nodeResourceData, searchTerm]);
 
   return (

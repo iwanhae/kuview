@@ -15,7 +15,7 @@ export default function Root() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       {/* Cluster Resource Overview */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 h-[480px]">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ClusterResourceOverview />
         <NodesResourceTable />
       </div>
