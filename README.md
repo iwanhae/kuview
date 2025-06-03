@@ -1,51 +1,105 @@
-# KuView - Kubernetes Real-time Monitor
+# KuView: In-Browser Kubernetes Dashboard
 
-KuView is a project designed to help you monitor your Kubernetes clusters in real-time. It provides a read-only view of your cluster's resources, focusing on delivering timely updates to a web-based user interface. This project does not aim to modify any Kubernetes resources; its sole purpose is observation and monitoring.
+KuView is a real-time, read-only Kubernetes dashboard that operates entirely within your web browser. It offers an immediate and comprehensive overview of your cluster's status and resource utilization without requiring any server-side installation or kubectl plugins.
 
-## Data Flow Architecture
+## Core Features
 
-The data flow in KuView is designed to efficiently stream Kubernetes resource updates from a Go-based WebAssembly (Wasm) module to a React frontend, using Zustand for state management.
+- **Real-time Monitoring**: Observe live updates of resource states and events within your cluster.
+- **Comprehensive Resource Visualization**: Monitor CPU and memory usage with clear, visual indicators and progress bars.
+- **Zero Installation**: KuView requires no installation on your cluster or local machine beyond `kubectl` access.
+- **Secure Read-only Access**: Operates in a strictly read-only mode, ensuring no modifications to your cluster state.
+- **High-Performance Client**: Leverages a WebAssembly-based Kubernetes client for efficient in-browser operation.
+- **Responsive User Interface**: Provides a consistent experience across desktop, tablet, and mobile devices.
+- **Modern UI/UX**: Features a clean, intuitive interface built with React for optimal user experience.
 
-1.  **Kubernetes Event Watching (`main.go`)**:
+## Quick Start Guide
 
-    - The Go program (`main.go`) is compiled into WebAssembly (`main.wasm`).
-    - It runs in the browser environment and connects to your Kubernetes cluster (via the credentials/configuration accessible to the browser or a proxy).
-    - It utilizes the Kubernetes client-go library, specifically controller-runtime, to watch for changes (Create, Update, Delete) in specified Kubernetes resources (e.g., Nodes, Pods, Services).
-    - When a change is detected for a watched resource, `main.go` emits an event containing the resource's kind, apiVersion, and metadata.
-    - These events are dispatched to a JavaScript function `document.kuview(event)` defined in the global scope.
+To begin monitoring your Kubernetes cluster:
 
-2.  **Initial Event Handling & Queuing (`index.html`)**:
+```bash
+# Download and extract the latest release
+curl -sL https://r2.iwanhae.kr/kuview/latest.tar.gz | tar xvz
 
-    - The main `index.html` file loads the `wasm_exec.js` runtime and `main.wasm`.
-    - Before the Wasm module fully initializes and before React mounts, `index.html` defines an initial `document.kuview` function.
-    - This initial function doesn't process the events immediately. Instead, it pushes incoming events into a global array: `window.kuviewEventQueue`.
-    - This queuing mechanism prevents event loss if the Go Wasm module starts emitting events before the React application is ready to handle them.
+# Initiate the dashboard (requires kubectl configured for your cluster)
+kubectl proxy -w ./dist
+```
 
-3.  **React Event Handler Setup & Queue Processing (`src/backgrounds/kuview.tsx`)**:
+Navigate to **http://127.0.0.1:8001/static** in your web browser.
 
-    - A React component, `KuviewBackground`, is responsible for bridging the Wasm events to the React state management system.
-    - When `KuviewBackground` mounts (in a `useEffect` hook):
-      1.  It first checks `window.kuviewEventQueue` for any events that were queued before it mounted.
-      2.  It processes each queued event by passing it to the `handleEvent` function from the Zustand store.
-      3.  After processing the queue, it clears `window.kuviewEventQueue`.
-      4.  It then overwrites `document.kuview` with a new function. This new function directly calls the `handleEvent` action from the Zustand store for any subsequent events.
-    - A cleanup function in `useEffect` ensures that if `KuviewBackground` unmounts, `document.kuview` is reset (e.g., to a function that logs or re-queues events) to prevent errors.
+## Functional Overview
 
-4.  **State Management with Zustand (`src/lib/kuview.ts`)**:
-    - The Zustand store defined in `src/lib/kuview.ts` is the central hub for managing the state of Kubernetes resources displayed in the UI.
-    - **Hierarchical State Structure**:
-      - The store maintains a primary `objects` state.
-      - This state is a nested record:
-        - The first level key is a string combining the resource's API version and kind: `"{apiVersion}/{kind}"` (e.g., `"v1/Node"`, `"v1/Pod"`).
-        - The second level key identifies the specific resource:
-          - For namespaced resources: `"{namespace}/{name}"` (e.g., `"default/my-app-pod"`).
-          - For cluster-scoped resources (like Nodes): `"{name}"` (e.g., `"my-worker-node"`).
-      - The value stored is a `StoredKubernetesObject`, containing essential fields like `kind`, `apiVersion`, and `metadata`.
-    - **Debounced Updates**:
-      - To optimize performance and avoid excessive state updates and re-renders from a high volume of events, the `handleEvent` action implements a debouncing mechanism.
-      - When an event arrives, instead of immediately updating the store, the change (upsert or delete) is recorded in a temporary `PENDING_CHANGES` map.
-      - A 100ms timer is started (or reset if already active).
-      - When the timer expires, all accumulated changes in `PENDING_CHANGES` are applied to the Zustand store in a single batch operation using `immer` for efficient immutable updates.
-    - **Selective Subscriptions**: React components can subscribe to specific slices of this state (e.g., only Nodes, or only Pods in a particular namespace), ensuring they only re-render when relevant data changes.
+KuView provides a detailed perspective on various aspects of your cluster:
 
-This architecture allows KuView to provide a responsive, real-time view of Kubernetes resources while managing state updates efficiently.
+### Cluster Summary
+- Aggregated resource utilization across all nodes.
+- Overall CPU and memory usage metrics, aiding in capacity planning.
+- Health status of core cluster components.
+
+### Node Monitoring
+- Resource consumption metrics for individual nodes.
+- Distribution of pods across available nodes.
+- Health and operational status indicators for each node.
+
+### Pod Management
+- Real-time status updates for all pods.
+- Comparison of resource requests versus limits.
+- Tracking of pod lifecycles and events.
+
+### Namespace-Based Organization
+- Resource views filtered by namespace.
+- Health status summaries per namespace.
+- Monitoring of resource quota utilization.
+
+## Technical Architecture
+
+KuView's architecture enables direct Kubernetes monitoring within the browser:
+
+1.  **WebAssembly (Wasm) Kubernetes Client**: A Go-based Kubernetes client, compiled to WebAssembly, runs natively in the browser.
+2.  **Client-Side Operation**: The entire application operates client-side, eliminating the need for a backend server component.
+3.  **Real-time Data Streaming**: Utilizes Kubernetes watch APIs to stream updates directly to the browser for instantaneous feedback.
+4.  **Efficient State Management**: Employs Zustand for state management, with debounced updates to ensure optimal rendering performance and responsiveness.
+
+## System Requirements
+
+- **kubectl**: Configured with access to your target Kubernetes cluster.
+- **Web Browser**: A modern web browser with WebAssembly support (e.g., Chrome, Firefox, Safari, Edge).
+- **Network Connectivity**: Access to the Kubernetes API server from the machine running the browser.
+
+## Benefits of KuView
+
+- **No Infrastructure Overhead**: Avoids the need to deploy and maintain additional monitoring solutions within your cluster.
+- **Rapid Deployment**: Transition from initial setup to active monitoring in under a minute.
+- **Lightweight Design**: Minimal impact on system resources.
+- **Enhanced Security**: Leverages your existing `kubectl` configuration and RBAC policies for secure, read-only access. All data processing occurs within the browser.
+- **Developer-Focused**: Ideal for local development clusters, application debugging, and rapid troubleshooting.
+
+## Target Use Cases
+
+- **Developers**: Debugging applications and observing resource interactions.
+- **DevOps Engineers**: Monitoring cluster health and performance.
+- **Platform Teams**: Providing standardized cluster visibility to users.
+- **Kubernetes Learners**: Exploring Kubernetes resources and concepts interactively.
+- **General Users**: Gaining quick and accessible insights into cluster status.
+
+## Security Considerations
+
+KuView is designed with security as a primary consideration:
+- Utilizes the security context of your existing `kubectl` configuration and respects defined RBAC policies.
+- No data is transmitted outside of the user's browser to any external server.
+- All operations are strictly read-only, preventing any modification to the cluster state.
+
+## Contributing
+
+Contributions are welcome. Please refer to the [contribution guidelines](CONTRIBUTING.md) for details on:
+- Reporting bugs
+- Requesting features
+- Improving documentation
+- Submitting code changes
+
+## License
+
+KuView is distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+
+---
+
+Begin exploring your Kubernetes cluster with KuView using the Quick Start commands provided above.
