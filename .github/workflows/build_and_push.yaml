@@ -36,9 +36,7 @@ jobs:
         run: npm run build
 
       - name: tar dist
-        env:
-          GZIP: "-9"
-        run: tar -czvf dist.tar.gz dist
+        run: tar --use-compress-program='gzip --best' -cvf dist.tar.gz dist
 
       - name: upload to s3
         env:
