@@ -4,6 +4,7 @@ import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
 import { nodeStatus, Status } from "@/lib/status";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -14,7 +15,10 @@ import {
 } from "@/components/ui/table";
 import ResourceCell from "./resource-cell";
 import StatusBadge from "./status-badge";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
+import { PREFIX } from "@/lib/const";
+import { RefreshCcw, RefreshCw } from "lucide-react";
 
 interface NodeResourceData {
   node: NodeObject;
@@ -108,46 +112,83 @@ function calculateNodeResourceData(
 }
 
 export default function NodesResourceTable() {
-  const nodes = useKuview("v1/Node");
-  const pods = useKuview("v1/Pod");
+  const rawNodes = useKuview("v1/Node");
+  const rawPods = useKuview("v1/Pod");
   const [searchTerm, setSearchTerm] = useState("");
+  const [, setLocation] = useLocation();
+
+  // State to hold nodes and pods data for calculation, updated manually
+  const [dataForCalculation, setDataForCalculation] = useState({
+    nodes: rawNodes,
+    pods: rawPods,
+  });
+
+  // Update dataForCalculation when rawNodes or rawPods change for the initial load.
+  // This useEffect will run once on mount and whenever rawNodes/rawPods references change.
+  // Subsequent updates will only happen via the refresh button.
+  useEffect(() => {
+    setDataForCalculation({ nodes: rawNodes, pods: rawPods });
+  }, [rawNodes, rawPods]);
+
+  const handleRefresh = () => {
+    setDataForCalculation({ nodes: rawNodes, pods: rawPods });
+  };
 
   const nodeResourceData = useMemo(
     () => {
-      console.log("Recalculating nodeResourceData");
-      return calculateNodeResourceData(nodes, pods);
+      console.log(
+        "Recalculating nodeResourceData due to dataForCalculation update",
+        new Date().toLocaleTimeString(),
+      );
+      return calculateNodeResourceData(
+        dataForCalculation.nodes,
+        dataForCalculation.pods,
+      );
     }, // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      Object.values(nodes)
+      Object.values(dataForCalculation.nodes)
         .map(
           (n) =>
             `${n.metadata.name}_${n.status.capacity?.cpu}_${n.status.capacity?.memory}`,
         )
         .join(","),
-      pods,
+      dataForCalculation.pods,
     ],
   );
 
-  // Sort by highest CPU usage (limits percentage)
+  // Sort by highest pod count, then by CPU usage (limits percentage)
   const sortedAndFilteredData = useMemo(() => {
     const filtered = nodeResourceData.filter((data) =>
       data.node.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     return filtered
-      .sort((a, b) => b.cpu.limitsPercentage - a.cpu.limitsPercentage)
-      .slice(0, 5);
+      .sort((a, b) => {
+        // Primary sort: podCount descending
+        if (b.podCount !== a.podCount) {
+          return b.podCount - a.podCount;
+        }
+        // Secondary sort: CPU limitsPercentage descending (optional, but good for tie-breaking)
+        return b.cpu.limitsPercentage - a.cpu.limitsPercentage;
+      })
+      .slice(0, 5); // Limit to 5 entries as per user's prior change
   }, [nodeResourceData, searchTerm]);
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <Input
-          type="search"
-          placeholder="Nodes Resource Usage"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div className="flex justify-between items-center gap-2">
+          <Input
+            type="search"
+            placeholder="Nodes Resource Usage"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -164,7 +205,13 @@ export default function NodesResourceTable() {
           </TableHeader>
           <TableBody className="overflow-y-auto max-h-[300px]">
             {sortedAndFilteredData.map((data) => (
-              <TableRow key={data.node.metadata.name}>
+              <TableRow
+                key={data.node.metadata.name}
+                onClick={() =>
+                  setLocation(`${PREFIX}/nodes?node=${data.node.metadata.name}`)
+                }
+                className="cursor-pointer hover:bg-muted/50"
+              >
                 <TableCell className="font-medium">
                   {data.node.metadata.name}
                 </TableCell>

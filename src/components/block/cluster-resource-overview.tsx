@@ -2,7 +2,10 @@ import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject } from "@/lib/kuview";
 import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import ClusterResourceBar from "./cluster-resource-bar";
+import { useState, useMemo, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
 
 interface ClusterResourceUsage {
   cpu: {
@@ -74,15 +77,42 @@ function calculateClusterResourceUsage(
 }
 
 export default function ClusterResourceOverview() {
-  const nodes = useKuview("v1/Node");
-  const pods = useKuview("v1/Pod");
+  const rawNodes = useKuview("v1/Node");
+  const rawPods = useKuview("v1/Pod");
 
-  const clusterUsage = calculateClusterResourceUsage(nodes, pods);
+  const [dataForCalculation, setDataForCalculation] = useState({
+    nodes: rawNodes,
+    pods: rawPods,
+  });
+
+  useEffect(() => {
+    setDataForCalculation({ nodes: rawNodes, pods: rawPods });
+  }, [rawNodes, rawPods]);
+
+  const handleRefresh = () => {
+    setDataForCalculation({ nodes: rawNodes, pods: rawPods });
+  };
+
+  const clusterUsage = useMemo(() => {
+    console.log(
+      "Recalculating clusterUsage due to dataForCalculation update",
+      new Date().toLocaleTimeString(),
+    );
+    return calculateClusterResourceUsage(
+      dataForCalculation.nodes,
+      dataForCalculation.pods,
+    );
+  }, [dataForCalculation]);
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Cluster Resource Overview</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Cluster Resource Overview</CardTitle>
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <ClusterResourceBar
