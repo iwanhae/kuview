@@ -1,18 +1,12 @@
 import { useKuview } from "@/hooks/useKuview";
 import { useState } from "react";
-import PodSearch from "@/components/block/pod-search";
+import SearchComponent from "@/components/block/search";
+import type { PodObject } from "@/lib/kuview";
+import { podStatus } from "@/lib/status";
 
-interface Pod {
-  metadata: {
-    name: string;
-    [key: string]: any;
-  };
-  [key: string]: any;
-}
-
-export default function Node() {
-  const pods = useKuview("v1/Pod");
-  const [pod, setPod] = useState<Pod | null>(null);
+export default function PodPage() {
+  const podsData = useKuview("v1/Pod") as Record<string, PodObject>;
+  const [selectedPod, setSelectedPod] = useState<PodObject | null>(null);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
@@ -20,12 +14,18 @@ export default function Node() {
         <h1 className="text-2xl font-bold">Pods</h1>
       </div>
 
-      {/* Node Search and Selection */}
-      <PodSearch
-        pods={Object.values(pods)}
-        onPodSelect={(podNN) => setPod(pods[podNN])}
-        selectedPodNN={`${pod?.metadata.namespace}/${pod?.metadata.name}`}
+      {/* Search */}
+      <SearchComponent<PodObject>
+        resources={Object.values(podsData)}
+        getResourceId={(po) => `${po.metadata.namespace}/${po.metadata.name}`}
+        getResourceStatus={podStatus}
+        onResourceSelect={(id) => setSelectedPod(podsData[id] || null)}
+        selectedResourceId={selectedPod?.metadata.name}
+        resourceTypeName="pod"
+        urlResourceParam="pod"
+        urlFilterParam="podFilter"
       />
+      {/* TODO: Add display for the selectedPod details if needed */}
     </div>
   );
 }

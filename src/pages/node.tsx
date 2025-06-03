@@ -1,26 +1,12 @@
 import { useKuview } from "@/hooks/useKuview";
-import { useCallback, useMemo, useState } from "react";
-import NodeSearch from "@/components/block/node-search";
+import { useState } from "react";
+import SearchComponent from "@/components/block/search";
+import type { NodeObject } from "@/lib/kuview";
+import { nodeStatus } from "@/lib/status";
 
-interface Node {
-  metadata: {
-    name: string;
-    [key: string]: any;
-  };
-  [key: string]: any;
-}
-
-export default function Node() {
-  const nodes = useKuview("v1/Node");
-  const [node, setNode] = useState<Node | null>(null);
-
-  const handleNodeSelect = useCallback(
-    (nodeName: string) => {
-      console.log(nodeName, nodes);
-      setNode(nodes[nodeName]);
-    },
-    [nodes],
-  );
+export default function NodePage() {
+  const nodes = useKuview("v1/Node") as Record<string, NodeObject>;
+  const [selectedNode, setSelectedNode] = useState<NodeObject | null>(null);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
@@ -28,20 +14,25 @@ export default function Node() {
         <h1 className="text-2xl font-bold">Nodes</h1>
       </div>
 
-      {/* Node Search and Selection */}
-      <NodeSearch
-        nodes={Object.values(nodes)}
-        onNodeSelect={handleNodeSelect}
-        selectedNodeName={node?.metadata.name}
+      {/* Search */}
+      <SearchComponent<NodeObject>
+        resources={Object.values(nodes)}
+        getResourceId={(node) => node.metadata.name}
+        getResourceStatus={nodeStatus}
+        onResourceSelect={(id) => setSelectedNode(nodes[id] || null)}
+        selectedResourceId={selectedNode?.metadata.name}
+        resourceTypeName="node"
+        urlResourceParam="node"
+        urlFilterParam="nodeFilter"
       />
 
       {/* Node Details Section */}
-      {node && (
+      {selectedNode && (
         <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Node Details</h2>
             <button
-              onClick={() => setNode(null)}
+              onClick={() => setSelectedNode(null)}
               className="text-gray-400 hover:text-gray-600"
             >
               ✕
@@ -51,20 +42,20 @@ export default function Node() {
             <div>
               <span className="font-medium text-gray-700">Name:</span>
               <span className="ml-2 font-mono text-sm">
-                {node.metadata.name}
+                {selectedNode.metadata.name}
               </span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Namespace:</span>
               <span className="ml-2 font-mono text-sm">
-                {node.metadata.namespace || "N/A"}
+                {selectedNode.metadata.namespace || "N/A"}
               </span>
             </div>
             {/* Add more node details here as needed */}
             <div className="mt-4 p-3 bg-white rounded border">
               <p className="text-sm text-gray-600 mb-2">Raw Data Preview:</p>
               <pre className="text-xs text-gray-800 overflow-auto max-h-32">
-                {JSON.stringify(node, null, 2)}
+                {JSON.stringify(selectedNode, null, 2)}
               </pre>
             </div>
           </div>

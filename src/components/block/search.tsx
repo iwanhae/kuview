@@ -1,135 +1,154 @@
-import type { PodObject } from "@/lib/kuview";
+// import type { KubeObject } from "@/lib/kuview"; // Assuming a base KubeObject type - removed this line
 import { useState, useMemo, useEffect } from "react";
-import {
-  podStatus,
-  Status,
-  STATUS_COLORS,
-  OVERVIEW_STATUS_ORDER,
-} from "@/lib/status";
+import { Status, STATUS_COLORS, OVERVIEW_STATUS_ORDER } from "@/lib/status";
 
-interface PodSearchProps {
-  pods: PodObject[];
-  onPodSelect?: (podName: string) => void;
-  selectedPodNN?: string;
+// Define a more specific KubeObject if needed, or use a generic constraint
+// For now, using a structural type that matches Kubernetes metadata
+interface BaseKubeObject {
+  metadata: {
+    name: string;
+    namespace?: string;
+    labels?: Record<string, string | undefined>;
+    [key: string]: any; // Allow other metadata fields
+  };
+  [key: string]: any; // Allow other top-level fields
 }
 
-export default function PodSearch({
-  pods,
-  onPodSelect,
-  selectedPodNN,
-}: PodSearchProps) {
+interface SearchComponentProps<T extends BaseKubeObject> {
+  resources: T[];
+  getResourceId: (resource: T) => string;
+  getResourceStatus: (resource: T) => Status;
+  onResourceSelect?: (resourceId: string) => void;
+  selectedResourceId?: string;
+  resourceTypeName: string; // e.g., "node", "pod"
+  urlResourceParam: string; // e.g., "node", "pod"
+  urlFilterParam: string; // e.g., "nodeFilter", "podFilter"
+}
+
+export default function SearchComponent<T extends BaseKubeObject>(
+  props: SearchComponentProps<T>,
+) {
+  const {
+    resources,
+    getResourceId,
+    getResourceStatus,
+    onResourceSelect,
+    selectedResourceId,
+    resourceTypeName,
+    urlResourceParam,
+    urlFilterParam,
+  } = props;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStatuses, setSelectedStatuses] = useState<Status[]>([]);
   const itemsPerPage = 100;
 
-  // Pods filtered by text search query (name or label)
-  const podsMatchingSearchQuery = useMemo(() => {
+  // Resources filtered by text search query (ID or label)
+  const resourcesMatchingSearchQuery = useMemo(() => {
     const trimmedSearchQuery = searchQuery.trim().toLowerCase();
     if (!trimmedSearchQuery) {
-      return pods;
+      return resources;
     }
-    return pods.filter((pod) => {
-      const nameMatch = `${pod.metadata.namespace}/${pod.metadata.name}`
+    return resources.filter((resource) => {
+      const idMatch = getResourceId(resource)
         .toLowerCase()
         .includes(trimmedSearchQuery);
-      const labelMatch = Object.values(pod.metadata.labels || {}).some(
+      const labelMatch = Object.values(resource.metadata.labels || {}).some(
         (labelValue) =>
           String(labelValue).toLowerCase().includes(trimmedSearchQuery),
       );
-      return nameMatch || labelMatch;
+      return idMatch || labelMatch;
     });
-  }, [pods, searchQuery]);
+  }, [resources, searchQuery, getResourceId]);
 
-  // Calculate counts for each status based on podsMatchingSearchQuery
+  // Calculate counts for each status based on resourcesMatchingSearchQuery
   const statusCounts = useMemo(() => {
     const counts: Record<Status, number> = OVERVIEW_STATUS_ORDER.reduce(
       (acc, status) => ({ ...acc, [status]: 0 }),
       {} as Record<Status, number>,
     );
-    podsMatchingSearchQuery.forEach((pod) => {
-      const status = podStatus(pod);
+    resourcesMatchingSearchQuery.forEach((resource) => {
+      const status = getResourceStatus(resource);
       if (counts[status] !== undefined) {
         counts[status]++;
       }
     });
     return counts;
-  }, [podsMatchingSearchQuery]);
+  }, [resourcesMatchingSearchQuery, getResourceStatus]);
 
-  // Filter pods based on selected statuses
-  const filteredPods = useMemo(() => {
+  // Filter resources based on selected statuses
+  const filteredResources = useMemo(() => {
     if (selectedStatuses.length === 0) {
-      return podsMatchingSearchQuery;
+      return resourcesMatchingSearchQuery;
     }
-    return podsMatchingSearchQuery.filter((pod) =>
-      selectedStatuses.includes(podStatus(pod)),
+    return resourcesMatchingSearchQuery.filter((resource) =>
+      selectedStatuses.includes(getResourceStatus(resource)),
     );
-  }, [podsMatchingSearchQuery, selectedStatuses]);
+  }, [resourcesMatchingSearchQuery, selectedStatuses, getResourceStatus]);
 
-  // Calculate pods for the current page
-  const paginatedPods = useMemo(() => {
+  // Calculate resources for the current page
+  const paginatedResources = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return filteredPods.slice(startIndex, endIndex);
-  }, [filteredPods, currentPage, itemsPerPage]);
+    return filteredResources.slice(startIndex, endIndex);
+  }, [filteredResources, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredPods.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredResources.length / itemsPerPage);
 
-  const handlePodSelectInternal = (podName: string) => {
+  const handleResourceSelectInternal = (resourceId: string) => {
     const params = new URLSearchParams(window.location.search);
-    if (podName) {
-      params.set("pod", podName);
+    if (resourceId) {
+      params.set(urlResourceParam, resourceId);
     } else {
-      params.delete("pod");
+      params.delete(urlResourceParam);
     }
     history.pushState(null, "", `?${params.toString()}`);
-    if (podName !== searchQuery) {
-      setSearchQuery(podName);
+    if (resourceId !== searchQuery) {
+      setSearchQuery(resourceId);
     }
   };
 
-  // Get pod NN from URL, and set it as the search query
+  // Get resource ID from URL, and set it as the search query
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const podNNFromUrl = params.get("pod");
-    if (podNNFromUrl) {
-      setSearchQuery(podNNFromUrl);
-    }
+    const resourceIdFromUrl = params.get(urlResourceParam);
+    if (resourceIdFromUrl) setSearchQuery(resourceIdFromUrl);
+  }, [urlResourceParam]);
 
-    const podFilterFromUrl = params.get("podFilter");
-    if (podFilterFromUrl) {
-      const statuses = podFilterFromUrl.split(",") as Status[];
+  // Get resource filter from URL, and set it as the selected statuses
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filterFromUrl = params.get(urlFilterParam);
+    if (filterFromUrl) {
+      const statuses = filterFromUrl.split(",") as Status[];
       setSelectedStatuses(
         statuses.filter((s) => OVERVIEW_STATUS_ORDER.includes(s)),
       );
     }
-  }, []); // Removed onPodSelect from dependencies
+  }, [urlFilterParam]);
 
-  // If the search query is a pod NN, select the pod
+  // If the search query is a resource ID, select the resource
   useEffect(() => {
-    if (
-      pods.find(
-        (pod) =>
-          `${pod.metadata.namespace}/${pod.metadata.name}` === searchQuery,
-      )
-    ) {
-      onPodSelect?.(searchQuery);
+    if (resources.find((res) => getResourceId(res) === searchQuery)) {
+      onResourceSelect?.(searchQuery);
     } else {
-      onPodSelect?.("");
+      onResourceSelect?.("");
     }
-  }, [searchQuery, pods, onPodSelect]);
+  }, [searchQuery, resources, onResourceSelect, getResourceId]);
 
   // If the selected statuses change, update the URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (selectedStatuses.length > 0) {
-      params.set("podFilter", selectedStatuses.join(","));
+      params.set(urlFilterParam, selectedStatuses.join(","));
     } else {
-      params.delete("podFilter");
+      params.delete(urlFilterParam);
     }
     history.pushState(null, "", `?${params.toString()}`);
-  }, [selectedStatuses]);
+  }, [selectedStatuses, urlFilterParam]);
 
+  // Pagination
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
@@ -155,7 +174,7 @@ export default function PodSearch({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search pods by name..."
+          placeholder={`Search ${resourceTypeName}s by name/id...`}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
         />
         {searchQuery && (
@@ -171,14 +190,14 @@ export default function PodSearch({
       {/* Results Count & Status Filter */}
       <div className="flex items-center justify-between text-sm text-gray-500">
         <div>
-          Showing {paginatedPods.length} of {filteredPods.length} pods
-          {searchQuery && ` matching "${searchQuery}"`}
+          Showing {paginatedResources.length} of {filteredResources.length}{" "}
+          {resourceTypeName}s{searchQuery && ` matching "${searchQuery}"`}
           {selectedStatuses.length > 0 && ` (filtered by status)`}
         </div>
         <div className="flex items-center space-x-2">
           {OVERVIEW_STATUS_ORDER.map((status) => {
             const count = statusCounts[status];
-            if (count === 0) return null; // Hide checkbox if count is 0
+            if (count === 0 && !selectedStatuses.includes(status)) return null;
             return (
               <label
                 key={status}
@@ -190,7 +209,11 @@ export default function PodSearch({
                   onChange={() => handleStatusChange(status)}
                   className="form-checkbox h-3 w-3 text-blue-600 rounded"
                 />
-                <span className={STATUS_COLORS[status].textColor}>
+                <span
+                  className={
+                    STATUS_COLORS[status]?.textColor || "text-gray-700"
+                  }
+                >
                   {status} ({count})
                 </span>
               </label>
@@ -204,22 +227,25 @@ export default function PodSearch({
         )}
       </div>
 
-      {/* Pod List */}
-      {filteredPods.length === 0 ? (
+      {/* Resource List */}
+      {filteredResources.length === 0 ? (
         <div className="bg-muted/50 rounded-xl p-8 text-center">
           <p className="text-gray-500">
-            {searchQuery ? "No pods match your search." : "No pods to display."}
+            {searchQuery
+              ? `No ${resourceTypeName}s match your search.`
+              : `No ${resourceTypeName}s to display.`}
           </p>
         </div>
       ) : (
         <div className="border border-gray-200 rounded-lg overflow-hidden h-[200px] overflow-y-auto">
-          {paginatedPods.map((pod) => (
+          {paginatedResources.map((resource) => (
             <Row
-              key={`${pod.metadata.namespace}/${pod.metadata.name}`}
-              pod={pod}
-              podCurrentStatus={podStatus(pod)}
-              selectedPodNN={selectedPodNN}
-              onPodSelect={handlePodSelectInternal}
+              key={getResourceId(resource)}
+              resource={resource}
+              resourceCurrentStatus={getResourceStatus(resource)}
+              selectedResourceId={selectedResourceId}
+              onResourceSelect={handleResourceSelectInternal}
+              getResourceId={getResourceId}
             />
           ))}
         </div>
@@ -248,33 +274,32 @@ export default function PodSearch({
   );
 }
 
-interface RowProps {
-  pod: PodObject;
-  podCurrentStatus: Status;
-  selectedPodNN?: string;
-  onPodSelect?: (podName: string) => void;
+interface RowProps<T extends BaseKubeObject> {
+  resource: T;
+  resourceCurrentStatus: Status;
+  selectedResourceId?: string;
+  onResourceSelect?: (resourceId: string) => void;
+  getResourceId: (resource: T) => string;
 }
 
-const Row = ({
-  pod,
-  podCurrentStatus,
-  selectedPodNN,
-  onPodSelect,
-}: RowProps) => {
-  const isSelected =
-    selectedPodNN === `${pod.metadata.namespace}/${pod.metadata.name}`;
-  const statusColor = STATUS_COLORS[podCurrentStatus]?.color || "bg-gray-500";
+const Row = <T extends BaseKubeObject>({
+  resource,
+  resourceCurrentStatus,
+  selectedResourceId,
+  onResourceSelect,
+  getResourceId,
+}: RowProps<T>) => {
+  const resourceId = getResourceId(resource);
+  const isSelected = selectedResourceId === resourceId;
+  const statusColor =
+    STATUS_COLORS[resourceCurrentStatus]?.color || "bg-gray-500";
 
   return (
     <div
       className={`flex items-center justify-between px-4 py-2 border-b border-gray-100 cursor-pointer transition-colors ${
         isSelected ? "bg-blue-50 border-blue-200" : "hover:bg-gray-50"
       }`}
-      onClick={() =>
-        onPodSelect?.(
-          isSelected ? "" : `${pod.metadata.namespace}/${pod.metadata.name}`,
-        )
-      }
+      onClick={() => onResourceSelect?.(isSelected ? "" : resourceId)}
     >
       <div className="flex items-center">
         <div
@@ -285,7 +310,7 @@ const Row = ({
             isSelected ? "text-blue-700 font-medium" : "text-gray-900"
           }`}
         >
-          {pod.metadata.namespace}/{pod.metadata.name}
+          {resourceId}
         </span>
       </div>
     </div>
