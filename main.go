@@ -46,7 +46,7 @@ func run(ctx context.Context) error {
 		Host: os.Getenv("HOST"),
 	}
 
-	emitter, err := NewJSEventEmitter("kuview")
+	emitter, err := NewJSEventEmitter()
 	if err != nil {
 		return fmt.Errorf("failed to create event emitter: %w", err)
 	}
@@ -150,14 +150,12 @@ const (
 
 type EventEmitter struct {
 	window js.Value
-	Name   string
 }
 
-func NewJSEventEmitter(name string) (*EventEmitter, error) {
+func NewJSEventEmitter() (*EventEmitter, error) {
 	eventTarget := js.Global()
 
 	res := EventEmitter{
-		Name:   name,
 		window: eventTarget,
 	}
 	return &res, nil
@@ -171,5 +169,5 @@ func (j *EventEmitter) Emit(v *Event) {
 	}
 
 	val := js.Global().Get("JSON").Call("parse", string(b))
-	j.window.Call(j.Name, val)
+	j.window.Call("send", val)
 }
