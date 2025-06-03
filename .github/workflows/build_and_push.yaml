@@ -34,3 +34,16 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: tar dist
+        env:
+          GZIP: "-9"
+        run: tar -czvf dist.tar.gz dist
+
+      - name: upload to s3
+        env:
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+        run: |
+          go run ./tools/upload -file dist.tar.gz -bucket public -key kuview/latest.tar.gz
