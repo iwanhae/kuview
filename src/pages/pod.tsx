@@ -12,7 +12,7 @@ export default function PodPage() {
   return (
     <div className="flex 2xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
       {/* Left Panel - Pod List */}
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 w-1/2">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold">Pods</h1>
         </div>
