@@ -66,7 +66,7 @@ export function useGVKSyncHook(gvk: string) {
       operations.forEach((operation) => {
         const { type, object } = operation;
         const { metadata } = object;
-        const nn = `${metadata.namespace}/${metadata.name}`;
+        const nn = metadata.namespace ? `${metadata.namespace}/${metadata.name}` : metadata.name;
 
         switch (type) {
           case 'UPSERT':
