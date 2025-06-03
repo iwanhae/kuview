@@ -154,10 +154,11 @@ type EventEmitter struct {
 }
 
 func NewJSEventEmitter(name string) (*EventEmitter, error) {
-	window := js.Global().Get("window")
+	eventTarget := js.Global()
+
 	res := EventEmitter{
 		Name:   name,
-		window: window,
+		window: eventTarget,
 	}
 	return &res, nil
 }
