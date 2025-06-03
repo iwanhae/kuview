@@ -6,7 +6,7 @@ import type { NodeObject } from "@/lib/kuview";
 import { nodeStatus } from "@/lib/status";
 
 export default function NodePage() {
-  const nodes = useKuview("v1/Node") as Record<string, NodeObject>;
+  const nodes = useKuview("v1/Node");
   const [selectedNode, setSelectedNode] = useState<NodeObject | null>(null);
 
   return (

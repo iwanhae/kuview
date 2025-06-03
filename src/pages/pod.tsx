@@ -6,7 +6,7 @@ import type { PodObject } from "@/lib/kuview";
 import { podStatus } from "@/lib/status";
 
 export default function PodPage() {
-  const podsData = useKuview("v1/Pod") as Record<string, PodObject>;
+  const podsData = useKuview("v1/Pod");
   const [selectedPod, setSelectedPod] = useState<PodObject | null>(null);
 
   return (

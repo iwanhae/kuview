@@ -10,6 +10,7 @@ import MetadataComponent from "./metadata";
 import NodeSpecComponent from "./node-spec";
 import NodeStatusComponent from "./node-status";
 import { cn } from "@/lib/utils";
+import NodeOverview from "./node-overview";
 
 interface NodeDetailProps {
   node: NodeObject;
@@ -23,6 +24,8 @@ export default function NodeDetail({ node, className }: NodeDetailProps) {
     <div className={cn("space-y-6", className)}>
       {/* Header */}
       <h2 className="text-xl font-semibold">{node.metadata.name}</h2>
+
+      <NodeOverview node={node} />
 
       {/* Status Section */}
       <NodeStatusComponent status={node.status} />
