@@ -490,3 +490,33 @@ interface NodeAddress {
     | "ExternalDNS";
   address: string;
 }
+
+// Metrics types
+export interface ContainerMetrics {
+  name: string;
+  usage: {
+    cpu: string;
+    memory: string;
+  };
+}
+
+export interface PodMetrics {
+  kind: "PodMetrics";
+  apiVersion: "metrics.k8s.io/v1beta1";
+  metadata: Metadata;
+  timestamp: string;
+  window: string;
+  containers: ContainerMetrics[];
+}
+
+export interface ListMeta {
+  resourceVersion?: string;
+  selfLink?: string;
+}
+
+export interface PodMetricsList {
+  kind: "List";
+  apiVersion: "v1";
+  metadata: ListMeta;
+  items: PodMetrics[];
+}

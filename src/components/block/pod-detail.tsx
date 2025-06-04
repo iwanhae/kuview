@@ -9,6 +9,7 @@ import { useState } from "react";
 import MetadataComponent from "./metadata";
 import PodSpecComponent from "./pod-spec";
 import PodStatusComponent from "./pod-status";
+import PodOverview from "./pod-overview"; // <-- Import here
 import { cn } from "@/lib/utils";
 
 interface PodDetailProps {
@@ -38,6 +39,9 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
 
       {/* Spec Section */}
       <PodSpecComponent spec={pod.spec} />
+
+      {/* Overview Section */}
+      <PodOverview pod={pod} />
 
       {/* JSON Original */}
       <Card>
