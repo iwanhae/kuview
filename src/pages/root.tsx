@@ -4,13 +4,19 @@ import NodesResourceTable from "@/components/block/nodes-resource-table";
 import { useKuview } from "@/hooks/useKuview";
 import { PREFIX } from "@/lib/const";
 import type { Status } from "@/lib/status";
-import { namespaceStatus, nodeStatus, podStatus } from "@/lib/status";
+import {
+  namespaceStatus,
+  nodeStatus,
+  podStatus,
+  serviceStatus,
+} from "@/lib/status";
 
 export default function Root() {
   const nodes = useKuview("v1/Node");
   const pods = useKuview("v1/Pod");
   const namespaces = useKuview("v1/Namespace");
-  // const services = useKuview("v1/Service");
+  const services = useKuview("v1/Service");
+  const endpointSlices = useKuview("discovery.k8s.io/v1/EndpointSlice");
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -54,6 +60,22 @@ export default function Root() {
           status={Object.values(pods).reduce(
             (acc, pod) => {
               const status = podStatus(pod).status;
+              acc[status] = (acc[status] || 0) + 1;
+              return acc;
+            },
+            {} as Record<Status, number>,
+          )}
+        />
+        {/* Services */}
+        <CardResourceOverview
+          href={`${PREFIX}/services`}
+          resourceName="Services"
+          status={Object.values(services).reduce(
+            (acc, service) => {
+              const status = serviceStatus(
+                service,
+                Object.values(endpointSlices),
+              ).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },

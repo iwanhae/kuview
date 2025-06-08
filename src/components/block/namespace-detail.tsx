@@ -11,9 +11,9 @@ import PodsGrid from "./pods-grid";
 import ServicesGrid from "./services-grid";
 import { cn } from "@/lib/utils";
 import { useKuview } from "@/hooks/useKuview";
-import { namespaceStatus, podStatus, serviceStatus } from "@/lib/status";
+import { namespaceStatus } from "@/lib/status";
 import { getStatusColor } from "@/lib/status";
-import { Badge } from "@/components/ui/badge";
+import NamespaceSpecComponent from "./namespace-spec";
 
 interface NamespaceDetailProps {
   namespace: NamespaceObject;
@@ -26,7 +26,6 @@ export default function NamespaceDetail({
 }: NamespaceDetailProps) {
   const pods = useKuview("v1/Pod");
   const services = useKuview("v1/Service");
-  const endpointSlices = useKuview("discovery.k8s.io/v1/EndpointSlice");
   const [jsonExpanded, setJsonExpanded] = useState(false);
 
   // Filter resources belonging to this namespace
@@ -36,28 +35,6 @@ export default function NamespaceDetail({
 
   const namespaceServices = Object.values(services).filter(
     (service) => service.metadata.namespace === namespace.metadata.name,
-  );
-
-  const endpointSlicesList = Object.values(endpointSlices);
-
-  // Calculate pod status distribution
-  const podStatusCounts = namespacePods.reduce(
-    (acc, pod) => {
-      const status = podStatus(pod).status;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  // Calculate service status distribution
-  const serviceStatusCounts = namespaceServices.reduce(
-    (acc, service) => {
-      const status = serviceStatus(service, endpointSlicesList).status;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
   );
 
   return (
@@ -77,7 +54,9 @@ export default function NamespaceDetail({
         return (
           <div className="flex items-center gap-2">
             <div
-              className={`w-5 h-5 rounded-full ${getStatusColor(condition.status)}`}
+              className={`w-5 h-5 rounded-full ${getStatusColor(
+                condition.status,
+              )}`}
             />
             <div className="text-sm text-muted-foreground">
               {condition.reason}
@@ -85,73 +64,6 @@ export default function NamespaceDetail({
           </div>
         );
       })()}
-
-      {/* Resource Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resource Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Pods</div>
-              <div className="text-2xl font-bold">{namespacePods.length}</div>
-              <div className="flex gap-1 flex-wrap">
-                {Object.entries(podStatusCounts).map(([status, count]) => (
-                  <Badge key={status} variant="outline" className="text-xs">
-                    {status}: {count}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Services</div>
-              <div className="text-2xl font-bold">
-                {namespaceServices.length}
-              </div>
-              <div className="flex gap-1 flex-wrap">
-                {Object.entries(serviceStatusCounts).map(([status, count]) => (
-                  <Badge key={status} variant="outline" className="text-xs">
-                    {status}: {count}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Namespace Spec */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Namespace Spec</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Phase:</span>
-              <span className="ml-2">{namespace.status.phase}</span>
-            </div>
-            {namespace.spec.finalizers &&
-              namespace.spec.finalizers.length > 0 && (
-                <div>
-                  <span className="font-medium">Finalizers:</span>
-                  <div className="ml-2 space-y-1">
-                    {namespace.spec.finalizers.map((finalizer, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="text-xs mr-1"
-                      >
-                        {finalizer}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Pods Grid */}
       <PodsGrid
@@ -167,6 +79,9 @@ export default function NamespaceDetail({
 
       {/* Metadata Section */}
       <MetadataComponent metadata={namespace.metadata} />
+
+      {/* Namespace Spec */}
+      <NamespaceSpecComponent spec={namespace.spec} status={namespace.status} />
 
       {/* JSON Original */}
       <Card>
