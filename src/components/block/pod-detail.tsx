@@ -14,6 +14,7 @@ import PodsGrid from "./pods-grid";
 import { useKuview } from "@/hooks/useKuview";
 import { podStatus } from "@/lib/status";
 import { getStatusColor } from "@/lib/status";
+import PodLogs from "./pod-logs";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -74,6 +75,9 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
           )}
         />
       )}
+
+      {/* Pod Logs */}
+      <PodLogs pod={pod} />
 
       {/* Status Section */}
       <PodStatusComponent status={pod.status} />

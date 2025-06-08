@@ -112,6 +112,8 @@ export interface NodeObject extends KubernetesObject {
 // Specs and Status interfaces
 interface PodSpec {
   containers: Container[];
+  initContainers?: Container[];
+  ephemeralContainers?: Container[];
   dnsPolicy?: string;
   enableServiceLinks?: boolean;
   hostname?: string;
@@ -129,7 +131,7 @@ interface PodSpec {
   volumes?: Volume[];
 }
 
-interface Container {
+export interface Container {
   name: string;
   image: string;
   imagePullPolicy?: "Always" | "IfNotPresent" | "Never";
