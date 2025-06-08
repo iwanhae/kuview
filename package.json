@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && rm -rf dist && vite build",
     "wasm": "GOOS=js GOARCH=wasm go build -o static/main.wasm ./main.go",
     "lint": "tsc -b && eslint .",
     "preview": "kubectl proxy --www=./dist --www-prefix=/static"
