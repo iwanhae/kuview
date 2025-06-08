@@ -2,7 +2,7 @@ import type { PodObject } from "@/lib/kuview";
 import { getStatusColor, podStatus } from "@/lib/status";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -18,7 +18,7 @@ interface PodsGridProps {
   pods: PodObject[];
 }
 
-const getPodColor = (pod: PodObject) => getStatusColor(podStatus(pod));
+const getPodColor = (pod: PodObject) => getStatusColor(podStatus(pod).status);
 const PODS_PER_PAGE = 100;
 
 export default function PodsGrid({ title, pods }: PodsGridProps) {
@@ -49,76 +49,67 @@ export default function PodsGrid({ title, pods }: PodsGridProps) {
   };
 
   return (
-    <Card>
+    <Card className="gap-3 pt-3 pb-5">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          {title || "Pods"} ({pods.length})
+          {shouldShowPagination && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </CardTitle>
+      </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium">
-                {title || "Pods"} ({pods.length})
-                {shouldShowPagination && (
-                  <span className="text-muted-foreground ml-2">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                )}
-              </h3>
-              {shouldShowPagination && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToPrevPage}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {startIndex + 1}-{Math.min(endIndex, pods.length)}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-0.5">
-              <TooltipProvider>
-                {currentPods.map((pod) => (
-                  <Tooltip
-                    key={`${pod.metadata.namespace}/${pod.metadata.name}`}
-                  >
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-all  ${getPodColor(pod)}`}
-                        onClick={() => internalHandlePodClick(pod)}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">{pod.metadata.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Namespace: {pod.metadata.namespace}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Status: {podStatus(pod)}
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </TooltipProvider>
-            </div>
-            {pods.length === 0 && (
-              <p className="text-muted-foreground text-sm">
-                No pods running on this node
-              </p>
-            )}
+          <div className="flex flex-wrap gap-0.5">
+            <TooltipProvider>
+              {currentPods.map((pod) => (
+                <Tooltip key={`${pod.metadata.namespace}/${pod.metadata.name}`}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-all  ${getPodColor(pod)}`}
+                      onClick={() => internalHandlePodClick(pod)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-medium">{pod.metadata.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Namespace: {pod.metadata.namespace}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Status: {podStatus(pod).status}
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </TooltipProvider>
           </div>
+          {pods.length === 0 && (
+            <p className="text-muted-foreground text-sm">
+              No pods running on this node
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

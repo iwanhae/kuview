@@ -79,10 +79,18 @@ export const OVERVIEW_STATUS_ORDER: Status[] = [
   Status.Error,
 ];
 
-export function nodeStatus(node: NodeObject) {
+export interface Condition {
+  status: Status;
+  reason: string;
+}
+
+export function nodeStatus(node: NodeObject): Condition {
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (node.metadata.deletionTimestamp) {
-    return Status.Terminating;
+    return {
+      status: Status.Terminating,
+      reason: `metadata.deletionTimestamp is set to ${node.metadata.deletionTimestamp}`,
+    };
   }
 
   // if node's condition with type "Ready" is not "True", return Error
@@ -91,7 +99,10 @@ export function nodeStatus(node: NodeObject) {
       (condition) => condition.type === "Ready" && condition.status !== "True",
     )
   ) {
-    return Status.Error;
+    return {
+      status: Status.Error,
+      reason: `in status.conditions, where the type is "Ready" does not have status "True"`,
+    };
   }
 
   // every condition other than "Ready" is not "False", return Warning
@@ -100,26 +111,41 @@ export function nodeStatus(node: NodeObject) {
       ?.filter((condition) => condition.type !== "Ready")
       .every((condition) => condition.status !== "False")
   ) {
-    return Status.Warning;
+    return {
+      status: Status.Warning,
+      reason: `in status.conditions, where the type is not "Ready" does not have status "False"`,
+    };
   }
 
-  return Status.Running;
+  return {
+    status: Status.Running,
+    reason: `in status.conditions, where the type is "Ready" has status "True"`,
+  };
 }
 
-export function podStatus(pod: PodObject) {
+export function podStatus(pod: PodObject): Condition {
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (pod.metadata.deletionTimestamp) {
-    return Status.Terminating;
+    return {
+      status: Status.Terminating,
+      reason: `metadata.deletionTimestamp is set to ${pod.metadata.deletionTimestamp}`,
+    };
   }
 
   // Done: if pod's phase is "Succeeded", return Done
   if (pod.status.phase === "Succeeded") {
-    return Status.Done;
+    return {
+      status: Status.Done,
+      reason: `status.phase is "Succeeded"`,
+    };
   }
 
   // Error - Done: if pod's phase is "Failed", return Error
   if (pod.status.phase === "Failed") {
-    return Status.Error;
+    return {
+      status: Status.Error,
+      reason: `status.phase is "Failed"`,
+    };
   }
 
   // Pending: if pod's phase is "Pending", return Pending
@@ -133,9 +159,15 @@ export function podStatus(pod: PodObject) {
         dayjs().subtract(1, "minute"),
       )
     ) {
-      return Status.Pending;
+      return {
+        status: Status.Pending,
+        reason: `status.phase is "Pending" and creationTimestamp is less than 1 minute`,
+      };
     } else {
-      return Status.Warning;
+      return {
+        status: Status.Warning,
+        reason: `status.phase is "Pending" and creationTimestamp is more than 1 minute`,
+      };
     }
   }
 
@@ -145,7 +177,10 @@ export function podStatus(pod: PodObject) {
       (status) => status.state?.waiting?.reason === "CrashLoopBackOff",
     )
   ) {
-    return Status.Error;
+    return {
+      status: Status.Error,
+      reason: `status.containerStatuses.state.waiting.reason is "CrashLoopBackOff"`,
+    };
   }
 
   // Warning: if some of pod's container statuses's lastState.terminated is not null
@@ -159,18 +194,27 @@ export function podStatus(pod: PodObject) {
         ),
     )
   ) {
-    return Status.Error;
+    return {
+      status: Status.Error,
+      reason: `status.containerStatuses.lastState.terminated.finishedAt is less than 10 minutes ago`,
+    };
   }
 
   // Error - Unknown: if pod's phase is "Unknown", return Error
   if (pod.status.phase === "Unknown") {
-    return Status.Error;
+    return {
+      status: Status.Error,
+      reason: `status.phase is "Unknown"`,
+    };
   }
 
-  return Status.Running;
+  return {
+    status: Status.Running,
+    reason: `status.phase is "Running"`,
+  };
 }
 
-export function namespaceStatus(namespace: NamespaceObject) {
+export function namespaceStatus(namespace: NamespaceObject): Condition {
   // Error: if namespace's status.phase is "Terminating"
   // and deletionTimestamp is more than 1 hour ago
   if (
@@ -179,13 +223,22 @@ export function namespaceStatus(namespace: NamespaceObject) {
       dayjs().subtract(1, "hour"),
     )
   ) {
-    return Status.Error;
+    return {
+      status: Status.Error,
+      reason: `status.phase is "Terminating" and deletionTimestamp is more than 1 hour ago`,
+    };
   }
 
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (namespace.metadata.deletionTimestamp) {
-    return Status.Terminating;
+    return {
+      status: Status.Terminating,
+      reason: `metadata.deletionTimestamp is set to ${namespace.metadata.deletionTimestamp}`,
+    };
   }
 
-  return Status.Running;
+  return {
+    status: Status.Running,
+    reason: `metadata.deletionTimestamp is not set`,
+  };
 }

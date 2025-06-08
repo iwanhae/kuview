@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "wasm": "GOOS=js GOARCH=wasm go build -o static/main.wasm ./main.go",
-    "lint": "eslint .",
+    "lint": "tsc -b && eslint .",
     "preview": "kubectl proxy --www=./dist --www-prefix=/static"
   },
   "dependencies": {

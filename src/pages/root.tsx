@@ -27,7 +27,7 @@ export default function Root() {
           resourceName="Nodes"
           status={Object.values(nodes).reduce(
             (acc, node) => {
-              const status = nodeStatus(node);
+              const status = nodeStatus(node).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },
@@ -40,7 +40,7 @@ export default function Root() {
           resourceName="Namespaces"
           status={Object.values(namespaces).reduce(
             (acc, namespace) => {
-              const status = namespaceStatus(namespace);
+              const status = namespaceStatus(namespace).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },
@@ -53,7 +53,7 @@ export default function Root() {
           resourceName="Pods"
           status={Object.values(pods).reduce(
             (acc, pod) => {
-              const status = podStatus(pod);
+              const status = podStatus(pod).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },

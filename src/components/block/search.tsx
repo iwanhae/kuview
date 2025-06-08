@@ -1,6 +1,11 @@
 // import type { KubeObject } from "@/lib/kuview"; // Assuming a base KubeObject type - removed this line
 import { useState, useMemo, useEffect } from "react";
-import { Status, STATUS_COLORS, OVERVIEW_STATUS_ORDER } from "@/lib/status";
+import {
+  Status,
+  STATUS_COLORS,
+  OVERVIEW_STATUS_ORDER,
+  type Condition,
+} from "@/lib/status";
 import { useSearch } from "wouter";
 
 // Define a more specific KubeObject if needed, or use a generic constraint
@@ -16,7 +21,7 @@ interface BaseKubeObject {
 interface SearchComponentProps<T extends BaseKubeObject> {
   resources: T[];
   getResourceId: (resource: T) => string;
-  getResourceStatus: (resource: T) => Status;
+  getResourceStatus: (resource: T) => Condition;
   onResourceSelect?: (resourceId: string) => void;
   selectedResourceId?: string;
   resourceTypeName: string; // e.g., "node", "pod"
@@ -69,7 +74,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
       {} as Record<Status, number>,
     );
     resourcesMatchingSearchQuery.forEach((resource) => {
-      const status = getResourceStatus(resource);
+      const status = getResourceStatus(resource).status;
       if (counts[status] !== undefined) {
         counts[status]++;
       }
@@ -83,7 +88,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
       return resourcesMatchingSearchQuery;
     }
     return resourcesMatchingSearchQuery.filter((resource) =>
-      selectedStatuses.includes(getResourceStatus(resource)),
+      selectedStatuses.includes(getResourceStatus(resource).status),
     );
   }, [resourcesMatchingSearchQuery, selectedStatuses, getResourceStatus]);
 
@@ -242,7 +247,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
             <Row
               key={getResourceId(resource)}
               resource={resource}
-              resourceCurrentStatus={getResourceStatus(resource)}
+              resourceCurrentStatus={getResourceStatus(resource).status}
               selectedResourceId={selectedResourceId}
               onResourceSelect={handleResourceSelectInternal}
               getResourceId={getResourceId}

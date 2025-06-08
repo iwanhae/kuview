@@ -69,7 +69,7 @@ function calculateNodeResourceData(
         requestsPercentage: 0,
         limitsPercentage: 0,
       },
-      status: nodeStatus(node),
+      status: nodeStatus(node).status,
     };
   });
 
