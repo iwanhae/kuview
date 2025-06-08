@@ -11,6 +11,7 @@ import NodeSpecComponent from "./node-spec";
 import NodeStatusComponent from "./node-status";
 import { cn } from "@/lib/utils";
 import NodeOverview from "./node-overview";
+import { getStatusColor, nodeStatus } from "@/lib/status";
 
 interface NodeDetailProps {
   node: NodeObject;
@@ -24,6 +25,18 @@ export default function NodeDetail({ node, className }: NodeDetailProps) {
     <div className={cn("space-y-6", className)}>
       {/* Header */}
       <h2 className="text-xl font-semibold">{node.metadata.name}</h2>
+
+      {(() => {
+        const condition = nodeStatus(node);
+        return (
+          <div className="flex items-center gap-2">
+            <div className={`w-5 h-5 ${getStatusColor(condition.status)}`} />
+            <div className="text-sm text-muted-foreground">
+              {condition.reason}
+            </div>
+          </div>
+        );
+      })()}
 
       <NodeOverview node={node} />
 

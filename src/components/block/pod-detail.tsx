@@ -47,28 +47,33 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
         );
       })()}
 
+      {/* Pods in the same node */}
       <PodsGrid
-        title="Same node"
+        title={`Node "${pod.spec.nodeName}"`}
         pods={Object.values(pods).filter(
           (p) => p.spec.nodeName === pod.spec.nodeName,
         )}
       />
 
+      {/* Pods in the same namespace */}
       <PodsGrid
-        title="Same namespace"
+        title={`Namespace "${pod.metadata.namespace}"`}
         pods={Object.values(pods).filter(
           (p) => p.metadata.namespace === pod.metadata.namespace,
         )}
       />
 
-      <PodsGrid
-        title="Same owner"
-        pods={Object.values(pods).filter((p) =>
-          p.metadata.ownerReferences?.some((o) => {
-            return o.uid === pod.metadata.ownerReferences?.[0]?.uid;
-          }),
-        )}
-      />
+      {/* Pods with the same owner */}
+      {pod.metadata.ownerReferences && (
+        <PodsGrid
+          title={`${pod.metadata.ownerReferences?.[0]?.kind} "${pod.metadata.ownerReferences?.[0]?.name}"`}
+          pods={Object.values(pods).filter((p) =>
+            p.metadata.ownerReferences?.some((o) => {
+              return o.uid === pod.metadata.ownerReferences?.[0]?.uid;
+            }),
+          )}
+        />
+      )}
 
       {/* Status Section */}
       <PodStatusComponent status={pod.status} />
