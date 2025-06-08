@@ -172,7 +172,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Search Input */}
       <div className="relative">
         <input
