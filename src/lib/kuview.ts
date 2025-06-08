@@ -8,6 +8,7 @@ export interface KuviewObjectMap {
   "v1/Service": ServiceObject;
   "v1/Node": NodeObject;
   "v1/Namespace": NamespaceObject;
+  "discovery.k8s.io/v1/EndpointSlice": EndpointSliceObject;
 }
 
 export type GVK = keyof KuviewObjectMap;
@@ -489,4 +490,43 @@ interface NodeAddress {
     | "InternalDNS"
     | "ExternalDNS";
   address: string;
+}
+
+export interface EndpointSliceObject extends KubernetesObject {
+  kind: "EndpointSlice";
+  apiVersion: "discovery.k8s.io/v1";
+  metadata: Metadata;
+  addressType: "IPv4" | "IPv6" | "FQDN";
+  endpoints?: Endpoint[];
+  ports?: EndpointPort[];
+}
+
+interface Endpoint {
+  addresses: string[];
+  conditions?: EndpointConditions;
+  hostname?: string;
+  nodeName?: string;
+  targetRef?: ObjectReference;
+  zone?: string;
+}
+
+interface EndpointConditions {
+  ready: boolean;
+  serving: boolean;
+  terminating: boolean;
+}
+
+interface ObjectReference {
+  apiVersion?: string;
+  kind?: string;
+  name?: string;
+  namespace?: string;
+  uid?: string;
+}
+
+interface EndpointPort {
+  name?: string;
+  port: number;
+  protocol?: "TCP" | "UDP" | "SCTP";
+  appProtocol?: string;
 }

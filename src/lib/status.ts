@@ -1,4 +1,10 @@
-import type { NamespaceObject, NodeObject, PodObject } from "./kuview";
+import type {
+  NamespaceObject,
+  NodeObject,
+  PodObject,
+  ServiceObject,
+  EndpointSliceObject,
+} from "./kuview";
 import dayjs from "dayjs";
 
 export enum Status {
@@ -266,5 +272,84 @@ export function namespaceStatus(namespace: NamespaceObject): Condition {
   return {
     status: Status.Running,
     reason: `Namespace is active and healthy`,
+  };
+}
+
+export function serviceStatus(
+  service: ServiceObject,
+  endpointSlices: EndpointSliceObject[],
+): Condition {
+  // Find EndpointSlices that belong to this service
+  const serviceEndpointSlices = endpointSlices.filter((slice) =>
+    slice.metadata.ownerReferences?.some(
+      (ref) => ref.kind === "Service" && ref.uid === service.metadata.uid,
+    ),
+  );
+
+  // If no EndpointSlices found, check service type
+  if (serviceEndpointSlices.length === 0) {
+    if (service.spec.type === "ExternalName") {
+      return {
+        status: Status.Running,
+        reason: "ExternalName service is active",
+      };
+    }
+    return {
+      status: Status.Warning,
+      reason: "No endpoints found for service",
+    };
+  }
+
+  // Collect all endpoints from all slices
+  const allEndpoints = serviceEndpointSlices.flatMap(
+    (slice) => slice.endpoints,
+  );
+
+  if (allEndpoints.length === 0) {
+    return {
+      status: Status.Warning,
+      reason: "Service has no endpoints",
+    };
+  }
+
+  const readyEndpoints = allEndpoints.filter(
+    (endpoint) => endpoint?.conditions?.ready,
+  );
+  const terminatingEndpoints = allEndpoints.filter(
+    (endpoint) => endpoint?.conditions?.terminating,
+  );
+
+  // If all endpoints are terminating
+  if (terminatingEndpoints.length === allEndpoints.length) {
+    return {
+      status: Status.Terminating,
+      reason: "All endpoints are terminating",
+    };
+  }
+
+  // If no ready endpoints
+  if (readyEndpoints.length === 0) {
+    return {
+      status: Status.Error,
+      reason: "No ready endpoints available",
+    };
+  }
+
+  // If some endpoints are not ready
+  if (
+    readyEndpoints.length <
+    allEndpoints.length - terminatingEndpoints.length
+  ) {
+    return {
+      status: Status.Warning,
+      reason: `${readyEndpoints.length}/${
+        allEndpoints.length - terminatingEndpoints.length
+      } endpoints ready`,
+    };
+  }
+
+  return {
+    status: Status.Running,
+    reason: `${readyEndpoints.length}/${allEndpoints.length} endpoints ready`,
   };
 }
