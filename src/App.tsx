@@ -4,6 +4,7 @@ import Root from "./pages/root";
 import Node from "./pages/node";
 import Pod from "./pages/pod";
 import Namespace from "./pages/namespace";
+import Service from "./pages/service";
 import KuviewBackground from "./backgrounds/kuview";
 import Debug from "./pages/debug";
 import { PREFIX } from "./lib/const";
@@ -21,6 +22,7 @@ export default function Page() {
             <Route path={`${PREFIX}/nodes`} component={Node} />
             <Route path={`${PREFIX}/pods`} component={Pod} />
             <Route path={`${PREFIX}/namespaces`} component={Namespace} />
+            <Route path={`${PREFIX}/services`} component={Service} />
             <Route path={`${PREFIX}/debug`} component={Debug} />
           </Switch>
         </div>

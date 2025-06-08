@@ -396,9 +396,11 @@ interface PodCondition {
 }
 
 interface ServiceSpec {
-  type: string;
+  type?: string;
   ports?: ServicePort[];
   selector?: Record<string, string>;
+  clusterIP?: string;
+  externalIPs?: string[];
 }
 
 interface ServiceStatus {
@@ -412,6 +414,7 @@ interface ServicePort {
   port: number;
   targetPort?: number | string;
   protocol?: string;
+  nodePort?: number;
 }
 
 interface NodeSpec {
