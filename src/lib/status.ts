@@ -89,37 +89,43 @@ export function nodeStatus(node: NodeObject): Condition {
   if (node.metadata.deletionTimestamp) {
     return {
       status: Status.Terminating,
-      reason: `metadata.deletionTimestamp is set to ${node.metadata.deletionTimestamp}`,
+      reason: `Scheduled for deletion ${dayjs().diff(
+        dayjs(node.metadata.deletionTimestamp),
+        "second",
+      )} seconds ago`,
     };
   }
 
   // if node's condition with type "Ready" is not "True", return Error
-  if (
-    node.status.conditions?.some(
-      (condition) => condition.type === "Ready" && condition.status !== "True",
-    )
-  ) {
+  const readyCondition = node.status.conditions?.find(
+    (condition) => condition.type === "Ready",
+  );
+  if (readyCondition && readyCondition.status !== "True") {
     return {
       status: Status.Error,
-      reason: `in status.conditions, where the type is "Ready" does not have status "True"`,
+      reason: `Node is not ready: ${readyCondition.reason || readyCondition.message || "Ready condition status is not True"}`,
     };
   }
 
   // every condition other than "Ready" is not "False", return Warning
-  if (
-    node.status.conditions
-      ?.filter((condition) => condition.type !== "Ready")
-      .every((condition) => condition.status !== "False")
-  ) {
+  const nonReadyConditions = node.status.conditions?.filter(
+    (condition) => condition.type !== "Ready",
+  );
+  const problemConditions = nonReadyConditions?.filter(
+    (condition) => condition.status !== "False",
+  );
+
+  if (problemConditions && problemConditions.length > 0) {
+    const conditionNames = problemConditions.map((c) => c.type).join(", ");
     return {
       status: Status.Warning,
-      reason: `in status.conditions, where the type is not "Ready" does not have status "False"`,
+      reason: `Node has concerning conditions: ${conditionNames}`,
     };
   }
 
   return {
     status: Status.Running,
-    reason: `in status.conditions, where the type is "Ready" has status "True"`,
+    reason: `Node is ready and all conditions are healthy`,
   };
 }
 
@@ -128,7 +134,10 @@ export function podStatus(pod: PodObject): Condition {
   if (pod.metadata.deletionTimestamp) {
     return {
       status: Status.Terminating,
-      reason: `metadata.deletionTimestamp is set to ${pod.metadata.deletionTimestamp}`,
+      reason: `Scheduled for deletion ${dayjs().diff(
+        dayjs(pod.metadata.deletionTimestamp),
+        "second",
+      )} seconds ago`,
     };
   }
 
@@ -161,30 +170,21 @@ export function podStatus(pod: PodObject): Condition {
     ) {
       return {
         status: Status.Pending,
-        reason: `status.phase is "Pending" and creationTimestamp is less than 1 minute`,
+        reason: `status.phase is "Pending"`,
       };
     } else {
       return {
         status: Status.Warning,
-        reason: `status.phase is "Pending" and creationTimestamp is more than 1 minute`,
+        reason: `status.phase is in "Pending" state for ${dayjs().diff(
+          dayjs(pod.metadata.creationTimestamp),
+          "minute",
+        )} minutes`,
       };
     }
   }
 
-  // Warning: if pod's status.containerStatuses's state.waiting.reason is "CrashLoopBackOff", return Warning
-  if (
-    pod.status.containerStatuses?.some(
-      (status) => status.state?.waiting?.reason === "CrashLoopBackOff",
-    )
-  ) {
-    return {
-      status: Status.Error,
-      reason: `status.containerStatuses.state.waiting.reason is "CrashLoopBackOff"`,
-    };
-  }
-
-  // Warning: if some of pod's container statuses's lastState.terminated is not null
-  // and it is less than 10 minutes ago, return Warning
+  // Error: if some of pod's container statuses's lastState.terminated is not null
+  // and it is less than 10 minutes ago, return Error
   if (
     pod.status.containerStatuses?.some(
       (status) =>
@@ -194,9 +194,27 @@ export function podStatus(pod: PodObject): Condition {
         ),
     )
   ) {
+    const container = pod.status.containerStatuses?.find(
+      (status) => status.lastState?.terminated,
+    );
     return {
       status: Status.Error,
-      reason: `status.containerStatuses.lastState.terminated.finishedAt is less than 10 minutes ago`,
+      reason: `Container "${container?.name || container?.image}" is terminated ${dayjs().diff(
+        dayjs(container?.lastState?.terminated?.finishedAt),
+        "minute",
+      )} minutes ago`,
+    };
+  }
+
+  // Error: if pod's status.containerStatuses's state.waiting.reason is "CrashLoopBackOff", return Error
+  if (
+    pod.status.containerStatuses?.some(
+      (status) => status.state?.waiting?.reason === "CrashLoopBackOff",
+    )
+  ) {
+    return {
+      status: Status.Error,
+      reason: `Pod is in CrashLoopBackOff state`,
     };
   }
 
@@ -223,22 +241,30 @@ export function namespaceStatus(namespace: NamespaceObject): Condition {
       dayjs().subtract(1, "hour"),
     )
   ) {
+    const hoursStuck = dayjs().diff(
+      dayjs(namespace.metadata.deletionTimestamp),
+      "hour",
+    );
     return {
       status: Status.Error,
-      reason: `status.phase is "Terminating" and deletionTimestamp is more than 1 hour ago`,
+      reason: `Namespace stuck in terminating state for ${hoursStuck} hours`,
     };
   }
 
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (namespace.metadata.deletionTimestamp) {
+    const minutesAgo = dayjs().diff(
+      dayjs(namespace.metadata.deletionTimestamp),
+      "minute",
+    );
     return {
       status: Status.Terminating,
-      reason: `metadata.deletionTimestamp is set to ${namespace.metadata.deletionTimestamp}`,
+      reason: `Scheduled for deletion ${minutesAgo} minutes ago`,
     };
   }
 
   return {
     status: Status.Running,
-    reason: `metadata.deletionTimestamp is not set`,
+    reason: `Namespace is active and healthy`,
   };
 }

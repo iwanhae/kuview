@@ -12,6 +12,8 @@ import PodStatusComponent from "./pod-status";
 import { cn } from "@/lib/utils";
 import PodsGrid from "./pods-grid";
 import { useKuview } from "@/hooks/useKuview";
+import { podStatus } from "@/lib/status";
+import { getStatusColor } from "@/lib/status";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -33,26 +35,38 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
         </p>
       </div>
 
+      {(() => {
+        const condition = podStatus(pod);
+        return (
+          <div className="flex items-center gap-2">
+            <div className={`w-5 h-5 ${getStatusColor(condition.status)}`} />
+            <div className="text-sm text-muted-foreground">
+              {condition.reason}
+            </div>
+          </div>
+        );
+      })()}
+
       <PodsGrid
-        title="Pods in same node"
+        title="Same node"
         pods={Object.values(pods).filter(
           (p) => p.spec.nodeName === pod.spec.nodeName,
         )}
       />
 
       <PodsGrid
-        title="Pods in same namespace"
+        title="Same namespace"
         pods={Object.values(pods).filter(
           (p) => p.metadata.namespace === pod.metadata.namespace,
         )}
       />
 
       <PodsGrid
-        title="Pods with same owner"
+        title="Same owner"
         pods={Object.values(pods).filter((p) =>
-          p.metadata.ownerReferences?.some(
-            (o) => o.uid === pod.metadata.ownerReferences?.[0]?.uid,
-          ),
+          p.metadata.ownerReferences?.some((o) => {
+            return o.uid === pod.metadata.ownerReferences?.[0]?.uid;
+          }),
         )}
       />
 
