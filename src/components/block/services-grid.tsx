@@ -93,7 +93,7 @@ export default function ServicesGrid({ title, services }: ServicesGridProps) {
                   >
                     <TooltipTrigger asChild>
                       <div
-                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-all ${getServiceColor(service, endpointSlicesList)}`}
+                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 ${getServiceColor(service, endpointSlicesList)}`}
                       />
                     </TooltipTrigger>
                     <TooltipContent>

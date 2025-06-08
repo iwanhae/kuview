@@ -279,55 +279,38 @@ export function serviceStatus(
   service: ServiceObject,
   endpointSlices: EndpointSliceObject[],
 ): Condition {
-  // Find EndpointSlices that belong to this service
-  const serviceEndpointSlices = endpointSlices.filter((slice) =>
+  const eps = endpointSlices.find((slice) =>
     slice.metadata.ownerReferences?.some(
-      (ref) => ref.kind === "Service" && ref.uid === service.metadata.uid,
+      (ref) => ref.uid === service.metadata.uid,
     ),
   );
 
-  // If no EndpointSlices found, check service type
-  if (serviceEndpointSlices.length === 0) {
+  if (!eps) {
+    // If service is ExternalName, return Running
     if (service.spec.type === "ExternalName") {
       return {
         status: Status.Running,
         reason: "ExternalName service is active",
       };
     }
+
+    // else, return Error
     return {
-      status: Status.Warning,
+      status: Status.Error,
+      reason: "No EndpointSlices found for service",
+    };
+  }
+
+  if (!eps.endpoints) {
+    return {
+      status: Status.Error,
       reason: "No endpoints found for service",
     };
   }
 
-  // Collect all endpoints from all slices
-  const allEndpoints = serviceEndpointSlices.flatMap(
-    (slice) => slice.endpoints,
-  );
+  const readyEndpoints =
+    eps.endpoints?.filter((endpoint) => endpoint?.conditions?.ready) || [];
 
-  if (allEndpoints.length === 0) {
-    return {
-      status: Status.Warning,
-      reason: "Service has no endpoints",
-    };
-  }
-
-  const readyEndpoints = allEndpoints.filter(
-    (endpoint) => endpoint?.conditions?.ready,
-  );
-  const terminatingEndpoints = allEndpoints.filter(
-    (endpoint) => endpoint?.conditions?.terminating,
-  );
-
-  // If all endpoints are terminating
-  if (terminatingEndpoints.length === allEndpoints.length) {
-    return {
-      status: Status.Terminating,
-      reason: "All endpoints are terminating",
-    };
-  }
-
-  // If no ready endpoints
   if (readyEndpoints.length === 0) {
     return {
       status: Status.Error,
@@ -335,21 +318,15 @@ export function serviceStatus(
     };
   }
 
-  // If some endpoints are not ready
-  if (
-    readyEndpoints.length <
-    allEndpoints.length - terminatingEndpoints.length
-  ) {
+  if (readyEndpoints.length < eps.endpoints.length) {
     return {
       status: Status.Warning,
-      reason: `${readyEndpoints.length}/${
-        allEndpoints.length - terminatingEndpoints.length
-      } endpoints ready`,
+      reason: `${readyEndpoints.length}/${eps.endpoints.length} endpoints ready`,
     };
   }
 
   return {
     status: Status.Running,
-    reason: `${readyEndpoints.length}/${allEndpoints.length} endpoints ready`,
+    reason: `${readyEndpoints.length}/${eps.endpoints.length} endpoints ready`,
   };
 }
