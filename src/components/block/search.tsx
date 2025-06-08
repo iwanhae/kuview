@@ -1,6 +1,7 @@
 // import type { KubeObject } from "@/lib/kuview"; // Assuming a base KubeObject type - removed this line
 import { useState, useMemo, useEffect } from "react";
 import { Status, STATUS_COLORS, OVERVIEW_STATUS_ORDER } from "@/lib/status";
+import { useSearch } from "wouter";
 
 // Define a more specific KubeObject if needed, or use a generic constraint
 // For now, using a structural type that matches Kubernetes metadata
@@ -41,6 +42,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStatuses, setSelectedStatuses] = useState<Status[]>([]);
   const itemsPerPage = 100;
+  const paramString = useSearch();
 
   // Resources filtered by text search query (ID or label)
   const resourcesMatchingSearchQuery = useMemo(() => {
@@ -119,7 +121,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
 
   // Handle URL resource selection independently from search query
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(paramString);
     const resourceIdFromUrl = params.get(urlResourceParam);
     if (
       resourceIdFromUrl &&
@@ -127,7 +129,13 @@ export default function SearchComponent<T extends BaseKubeObject>(
     ) {
       onResourceSelect?.(resourceIdFromUrl);
     }
-  }, [urlResourceParam, resources, onResourceSelect, getResourceId]);
+  }, [
+    urlResourceParam,
+    resources,
+    onResourceSelect,
+    getResourceId,
+    paramString,
+  ]);
 
   // If the selected statuses change, update the URL
   useEffect(() => {

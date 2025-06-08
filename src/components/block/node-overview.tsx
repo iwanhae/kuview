@@ -3,7 +3,7 @@ import type { NodeObject, PodObject } from "@/lib/kuview";
 import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ResourceBar from "./resource-bar";
-import NodePodsGrid from "./node-pods-grid";
+import PodsGrid from "./pods-grid";
 
 interface NodeOverviewProps {
   node: NodeObject;
@@ -78,7 +78,7 @@ export default function NodeOverview({ node }: NodeOverviewProps) {
   return (
     <div className="space-y-4">
       {/* Pods */}
-      <NodePodsGrid pods={nodePods} />
+      <PodsGrid pods={nodePods} />
 
       {/* Resource Usage */}
       <Card>

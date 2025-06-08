@@ -49,6 +49,27 @@ export const STATUS_COLORS = {
   },
 } as const;
 
+// getStatusColor returns the className combination of the status color and animation
+// it is good for representing the status for single resource
+export const getStatusColor = (status: Status) => {
+  switch (status) {
+    case Status.Running:
+      return STATUS_COLORS.Running.color + " animate-pulse";
+    case Status.Pending:
+      return STATUS_COLORS.Pending.color;
+    case Status.Error:
+      return STATUS_COLORS.Error.color + " animate-bounce";
+    case Status.Done:
+      return STATUS_COLORS.Done.color;
+    case Status.Warning:
+      return STATUS_COLORS.Warning.color + " animate-caret-blink";
+    case Status.Terminating:
+      return STATUS_COLORS.Terminating.color + " animate-pulse";
+    default:
+      return STATUS_COLORS.Pending.color;
+  }
+};
+
 export const OVERVIEW_STATUS_ORDER: Status[] = [
   Status.Running,
   Status.Pending,

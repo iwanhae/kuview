@@ -10,6 +10,8 @@ import MetadataComponent from "./metadata";
 import PodSpecComponent from "./pod-spec";
 import PodStatusComponent from "./pod-status";
 import { cn } from "@/lib/utils";
+import PodsGrid from "./pods-grid";
+import { useKuview } from "@/hooks/useKuview";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -17,6 +19,7 @@ interface PodDetailProps {
 }
 
 export default function PodDetail({ pod, className }: PodDetailProps) {
+  const pods = useKuview("v1/Pod");
   const [jsonExpanded, setJsonExpanded] = useState(false);
 
   return (
@@ -29,6 +32,29 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
           {pod.metadata.name}
         </p>
       </div>
+
+      <PodsGrid
+        title="Pods in same node"
+        pods={Object.values(pods).filter(
+          (p) => p.spec.nodeName === pod.spec.nodeName,
+        )}
+      />
+
+      <PodsGrid
+        title="Pods in same namespace"
+        pods={Object.values(pods).filter(
+          (p) => p.metadata.namespace === pod.metadata.namespace,
+        )}
+      />
+
+      <PodsGrid
+        title="Pods with same owner"
+        pods={Object.values(pods).filter((p) =>
+          p.metadata.ownerReferences?.some(
+            (o) => o.uid === pod.metadata.ownerReferences?.[0]?.uid,
+          ),
+        )}
+      />
 
       {/* Status Section */}
       <PodStatusComponent status={pod.status} />
