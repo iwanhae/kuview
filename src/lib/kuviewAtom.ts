@@ -117,9 +117,9 @@ export function useKubernetesAtomSyncHook() {
   }, [kubernetes, setKubernetes]);
 }
 
-// useServiceEndpointSliceSyncHook is a exceptional sync hook that handles both service and endpoint slice
-// because they are related to each other and finding each other is a bit computationally expensive
-// primary purpose of this hook to add endpointSlices to services (.kuviewExtra.endpointSlices)
+// useServiceEndpointSliceSyncHook is a exceptional sync hook that handles both of service and endpointslice resources
+// As they are related to each other, finding each other is a bit computationally expensive
+// Primary purpose of this hook is to add endpointSlices to its owner service (.kuviewExtra.endpointSlices)
 export function useServiceEndpointSliceSyncHook() {
   const kubernetes = useAtomValue(kubernetesAtom);
 
