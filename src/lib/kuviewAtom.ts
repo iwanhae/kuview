@@ -1,6 +1,13 @@
 import { atom, useAtom, useAtomValue, type PrimitiveAtom } from "jotai";
-import type { KubernetesObject, KuviewEvent } from "./kuview";
+import type {
+  EndpointSliceObject,
+  KubernetesObject,
+  KuviewEvent,
+  KuviewExtra,
+  ServiceObject,
+} from "./kuview";
 import { useEffect } from "react";
+import { getStatus } from "./status";
 
 const DEBOUNCE_MS = 100;
 
@@ -37,44 +44,48 @@ export function useGVKSyncHook(gvk: string) {
   const objectAtom = kubernetes[gvk];
   const [objects, setObjects] = useAtom(objectAtom);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const operations = PENDING_CHANGES.filter(
-        (operation) =>
-          `${operation.object.apiVersion}/${operation.object.kind}` === gvk,
-      );
-      if (operations.length == 0) return;
+  const sync = () => {
+    const operations = PENDING_CHANGES.filter(
+      (operation) =>
+        `${operation.object.apiVersion}/${operation.object.kind}` === gvk,
+    );
+    if (operations.length == 0) return;
 
-      operations.forEach((operation) => {
-        const { type, object } = operation;
-        const { metadata } = object;
-        const nn = metadata.namespace
-          ? `${metadata.namespace}/${metadata.name}`
-          : metadata.name;
+    operations.forEach((operation) => {
+      const { type, object } = operation;
+      const { metadata } = object;
+      const nn = metadata.namespace
+        ? `${metadata.namespace}/${metadata.name}`
+        : metadata.name;
 
-        switch (type) {
-          case "UPSERT":
-            objects[nn] = object;
-            break;
-          case "DELETE":
-            delete objects[nn];
-            break;
-        }
-      });
+      if (type === "UPSERT") object.kuviewExtra = { ...getStatus(object) };
 
-      for (const operation of operations) {
-        const index = PENDING_CHANGES.findIndex(
-          (o) => o.object.metadata.uid === operation.object.metadata.uid,
-        );
-        if (index !== -1) {
-          PENDING_CHANGES.splice(index, 1);
-        }
+      switch (type) {
+        case "UPSERT":
+          objects[nn] = object;
+          break;
+        case "DELETE":
+          delete objects[nn];
+          break;
       }
+    });
 
-      setObjects({ ...objects });
-    }, DEBOUNCE_MS);
+    for (const operation of operations) {
+      const index = PENDING_CHANGES.findIndex(
+        (o) => o.object.metadata.uid === operation.object.metadata.uid,
+      );
+      if (index !== -1) {
+        PENDING_CHANGES.splice(index, 1);
+      }
+    }
+
+    setObjects({ ...objects });
+  };
+
+  useEffect(() => {
+    const interval = setInterval(sync, DEBOUNCE_MS);
     return () => clearInterval(interval);
-  }, [objects, setObjects, gvk]);
+  }, []);
 }
 
 // useKubernetesAtomSyncHook defines a new GVK atom if it doesn't exist in kubernetesAtom but is in PENDING_CHANGES
@@ -98,4 +109,118 @@ export function useKubernetesAtomSyncHook() {
     }, 10_000); // 10 seconds
     return () => clearInterval(interval);
   }, [kubernetes, setKubernetes]);
+}
+
+// useServiceEndpointSliceSyncHook is a exceptional sync hook that handles both service and endpoint slice
+// because they are related to each other and finding each other is a bit computationally expensive
+// primary purpose of this hook to add endpointSlices to services (.kuviewExtra.endpointSlices)
+export function useServiceEndpointSliceSyncHook() {
+  const kubernetes = useAtomValue(kubernetesAtom);
+
+  const serviceAtom = kubernetes["v1/Service"];
+  const [services, setServices] = useAtom(serviceAtom);
+
+  const endpointSliceAtom = kubernetes["discovery.k8s.io/v1/EndpointSlice"];
+  const [endpointSlices, setEndpointSlices] = useAtom(endpointSliceAtom);
+
+  const sync = () => {
+    // 1. find all operations that are related to services and endpoint slices
+    const operations = PENDING_CHANGES.filter(
+      (operation) =>
+        operation.object.kind === "Service" ||
+        operation.object.kind === "EndpointSlice",
+    );
+
+    // 2. update services first
+    const serviceOperations = operations.filter(
+      (operation) => operation.object.kind === "Service",
+    );
+    serviceOperations.forEach((operation) => {
+      const { object } = operation;
+      const { metadata } = object;
+      const nn = `${metadata.namespace}/${metadata.name}`;
+
+      if (operation.type === "UPSERT") {
+        if (!services[nn]) services[nn] = object;
+        else
+          services[nn] = {
+            ...object,
+            kuviewExtra: services[nn].kuviewExtra,
+          };
+      } else if (operation.type === "DELETE") {
+        delete services[nn];
+      }
+    });
+
+    // 3. update endpoint slices
+    const endpointSliceOperations = operations.filter(
+      (operation) => operation.object.kind === "EndpointSlice",
+    );
+    endpointSliceOperations.forEach((operation) => {
+      const { object } = operation;
+      const { metadata } = object;
+      const nn = `${metadata.namespace}/${metadata.name}`;
+
+      if (operation.type === "UPSERT") {
+        endpointSlices[nn] = object;
+      } else if (operation.type === "DELETE") {
+        delete endpointSlices[nn];
+      }
+    });
+
+    // 4. insert endpointSlices to services
+    for (const ep of Object.values(endpointSlices) as EndpointSliceObject[]) {
+      // find owner reference
+      const ownerRef = ep.metadata.ownerReferences?.find(
+        // owner of endpoint slice can be either endpoints or service
+        // either way, name of owner is the same as the name of service
+        (o) => o.kind === "Endpoints" || o.kind === "Service",
+      );
+      if (!ownerRef) continue;
+      const nn = `${ep.metadata.namespace}/${ownerRef.name}`;
+
+      // find owner service
+      const ownerService = services[nn] as ServiceObject;
+      if (!ownerService) continue;
+
+      // insert endpoint slice to service
+      ownerService.kuviewExtra = {
+        endpointSlices: {},
+      } as KuviewExtra & {
+        endpointSlices: Record<string, EndpointSliceObject>;
+      };
+      ownerService.kuviewExtra.endpointSlices[ep.metadata.uid] = ep;
+    }
+
+    // 5. update status of services
+    for (const service of Object.values(services) as ServiceObject[]) {
+      const condition = getStatus(service);
+      if (service.kuviewExtra) {
+        service.kuviewExtra.status = condition.status;
+        service.kuviewExtra.reason = condition.reason;
+      } else {
+        service.kuviewExtra = {
+          status: condition.status,
+          reason: condition.reason,
+          endpointSlices: {},
+        };
+      }
+    }
+
+    // 6. remove operations from PENDING_CHANGES
+    for (const operation of operations) {
+      const index = PENDING_CHANGES.findIndex(
+        (o) => o.object.metadata.uid === operation.object.metadata.uid,
+      );
+      if (index !== -1) PENDING_CHANGES.splice(index, 1);
+    }
+
+    setServices({ ...services });
+    setEndpointSlices({ ...endpointSlices });
+  };
+
+  useEffect(() => {
+    const interval = setInterval(sync, DEBOUNCE_MS);
+    return () => clearInterval(interval);
+  }, []);
 }

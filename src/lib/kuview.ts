@@ -1,7 +1,13 @@
+import type { Condition } from "./status";
+
 export type KuviewEvent = {
   type: "create" | "update" | "delete" | "generic";
   object: KubernetesObject;
 };
+
+export interface KuviewExtra extends Condition {
+  [key: string]: unknown;
+}
 
 export interface KuviewObjectMap {
   "v1/Pod": PodObject;
@@ -38,6 +44,8 @@ export interface KubernetesObject {
   finalizers?: string[];
   spec: unknown;
   status: unknown;
+
+  kuviewExtra?: KuviewExtra;
 }
 
 export interface Metadata {
@@ -99,6 +107,10 @@ export interface ServiceObject extends KubernetesObject {
   metadata: Metadata;
   spec: ServiceSpec;
   status: ServiceStatus;
+
+  kuviewExtra?: KuviewExtra & {
+    endpointSlices: Record<string /* EndpointSliceUID */, EndpointSliceObject>;
+  };
 }
 
 export interface NodeObject extends KubernetesObject {
@@ -506,7 +518,7 @@ export interface EndpointSliceObject extends KubernetesObject {
   ports?: EndpointPort[];
 }
 
-interface Endpoint {
+export interface Endpoint {
   addresses: string[];
   conditions?: EndpointConditions;
   hostname?: string;

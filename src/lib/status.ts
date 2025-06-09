@@ -3,7 +3,8 @@ import type {
   NodeObject,
   PodObject,
   ServiceObject,
-  EndpointSliceObject,
+  KubernetesObject,
+  Endpoint,
 } from "./kuview";
 import dayjs from "dayjs";
 
@@ -88,6 +89,25 @@ export const OVERVIEW_STATUS_ORDER: Status[] = [
 export interface Condition {
   status: Status;
   reason: string;
+}
+
+export function getStatus(object: KubernetesObject): Condition {
+  const gvk = `${object.apiVersion}/${object.kind}`;
+  switch (gvk) {
+    case "v1/Pod":
+      return podStatus(object as PodObject);
+    case "v1/Node":
+      return nodeStatus(object as NodeObject);
+    case "v1/Namespace":
+      return namespaceStatus(object as NamespaceObject);
+    case "v1/Service":
+      return serviceStatus(object as ServiceObject);
+    default:
+      return {
+        status: Status.Pending,
+        reason: "Unknown resource type",
+      };
+  }
 }
 
 export function nodeStatus(node: NodeObject): Condition {
@@ -275,17 +295,10 @@ export function namespaceStatus(namespace: NamespaceObject): Condition {
   };
 }
 
-export function serviceStatus(
-  service: ServiceObject,
-  endpointSlices: EndpointSliceObject[],
-): Condition {
-  const eps = endpointSlices.find((slice) =>
-    slice.metadata.ownerReferences?.some(
-      (ref) => ref.uid === service.metadata.uid,
-    ),
-  );
+export function serviceStatus(service: ServiceObject): Condition {
+  const epss = Object.values(service.kuviewExtra?.endpointSlices || {});
 
-  if (!eps) {
+  if (!epss) {
     // If service is ExternalName, return Running
     if (service.spec.type === "ExternalName") {
       return {
@@ -301,7 +314,11 @@ export function serviceStatus(
     };
   }
 
-  if (!eps.endpoints) {
+  const endpoints = epss.reduce((acc, eps) => {
+    return [...acc, ...(eps.endpoints || [])];
+  }, [] as Endpoint[]);
+
+  if (!endpoints) {
     return {
       status: Status.Error,
       reason: "No endpoints found for service",
@@ -309,7 +326,7 @@ export function serviceStatus(
   }
 
   const readyEndpoints =
-    eps.endpoints?.filter((endpoint) => endpoint?.conditions?.ready) || [];
+    endpoints.filter((endpoint) => endpoint?.conditions?.ready) || [];
 
   if (readyEndpoints.length === 0) {
     return {
@@ -318,15 +335,15 @@ export function serviceStatus(
     };
   }
 
-  if (readyEndpoints.length < eps.endpoints.length) {
+  if (readyEndpoints.length < endpoints.length) {
     return {
       status: Status.Warning,
-      reason: `${readyEndpoints.length}/${eps.endpoints.length} endpoints ready`,
+      reason: `${readyEndpoints.length}/${endpoints.length} endpoints ready`,
     };
   }
 
   return {
     status: Status.Running,
-    reason: `${readyEndpoints.length}/${eps.endpoints.length} endpoints ready`,
+    reason: `${readyEndpoints.length}/${endpoints.length} endpoints ready`,
   };
 }
