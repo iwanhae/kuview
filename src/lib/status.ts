@@ -92,6 +92,15 @@ export interface Condition {
 }
 
 export function getStatus(object: KubernetesObject): Condition {
+  return (
+    object.kuviewExtra || {
+      status: Status.Error,
+      reason: "This is a bug. Need to fix it.",
+    }
+  );
+}
+
+export function calcStatus(object: KubernetesObject): Condition {
   const gvk = `${object.apiVersion}/${object.kind}`;
   switch (gvk) {
     case "v1/Pod":
@@ -110,7 +119,7 @@ export function getStatus(object: KubernetesObject): Condition {
   }
 }
 
-export function nodeStatus(node: NodeObject): Condition {
+function nodeStatus(node: NodeObject): Condition {
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (node.metadata.deletionTimestamp) {
     return {
@@ -155,7 +164,7 @@ export function nodeStatus(node: NodeObject): Condition {
   };
 }
 
-export function podStatus(pod: PodObject): Condition {
+function podStatus(pod: PodObject): Condition {
   // Terminating: if deletionTimestamp is not null, return Terminating
   if (pod.metadata.deletionTimestamp) {
     return {
@@ -258,7 +267,7 @@ export function podStatus(pod: PodObject): Condition {
   };
 }
 
-export function namespaceStatus(namespace: NamespaceObject): Condition {
+function namespaceStatus(namespace: NamespaceObject): Condition {
   // Error: if namespace's status.phase is "Terminating"
   // and deletionTimestamp is more than 1 hour ago
   if (
@@ -295,7 +304,7 @@ export function namespaceStatus(namespace: NamespaceObject): Condition {
   };
 }
 
-export function serviceStatus(service: ServiceObject): Condition {
+function serviceStatus(service: ServiceObject): Condition {
   const epss = Object.values(service.kuviewExtra?.endpointSlices || {});
 
   if (!epss) {

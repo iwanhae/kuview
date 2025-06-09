@@ -3,7 +3,7 @@ import { useState } from "react";
 import SearchComponent from "@/components/block/search";
 import NodeDetail from "@/components/block/node-detail";
 import type { NodeObject } from "@/lib/kuview";
-import { nodeStatus } from "@/lib/status";
+import { getStatus } from "@/lib/status";
 
 export default function NodePage() {
   const nodes = useKuview("v1/Node");
@@ -22,7 +22,7 @@ export default function NodePage() {
           <SearchComponent<NodeObject>
             resources={Object.values(nodes)}
             getResourceId={(node) => node.metadata.name}
-            getResourceStatus={nodeStatus}
+            getResourceStatus={getStatus}
             onResourceSelect={(id) => setSelectedNode(nodes[id] || null)}
             selectedResourceId={selectedNode?.metadata.name}
             resourceTypeName="node"

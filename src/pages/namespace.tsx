@@ -3,7 +3,7 @@ import { useState } from "react";
 import SearchComponent from "@/components/block/search";
 import NamespaceDetail from "@/components/block/namespace-detail";
 import type { NamespaceObject } from "@/lib/kuview";
-import { namespaceStatus } from "@/lib/status";
+import { getStatus } from "@/lib/status";
 
 export default function NamespacePage() {
   const namespacesData = useKuview("v1/Namespace");
@@ -22,7 +22,7 @@ export default function NamespacePage() {
         <SearchComponent<NamespaceObject>
           resources={Object.values(namespacesData)}
           getResourceId={(ns) => ns.metadata.name}
-          getResourceStatus={namespaceStatus}
+          getResourceStatus={getStatus}
           onResourceSelect={(id) =>
             setSelectedNamespace(namespacesData[id] || null)
           }

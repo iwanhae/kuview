@@ -11,7 +11,7 @@ import PodsGrid from "./pods-grid";
 import ServicesGrid from "./services-grid";
 import { cn } from "@/lib/utils";
 import { useKuview } from "@/hooks/useKuview";
-import { namespaceStatus } from "@/lib/status";
+import { getStatus } from "@/lib/status";
 import { getStatusColor } from "@/lib/status";
 import NamespaceSpecComponent from "./namespace-spec";
 
@@ -50,7 +50,7 @@ export default function NamespaceDetail({
 
       {/* Status */}
       {(() => {
-        const condition = namespaceStatus(namespace);
+        const condition = getStatus(namespace);
         return (
           <div className="flex items-center gap-2">
             <div

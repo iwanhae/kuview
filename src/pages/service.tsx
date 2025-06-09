@@ -3,16 +3,13 @@ import { useState } from "react";
 import SearchComponent from "@/components/block/search";
 import ServiceDetail from "@/components/block/service-detail";
 import type { ServiceObject } from "@/lib/kuview";
-import { serviceStatus } from "@/lib/status";
+import { getStatus } from "@/lib/status";
 
 export default function ServicePage() {
   const servicesData = useKuview("v1/Service");
-  const endpointSlices = useKuview("discovery.k8s.io/v1/EndpointSlice");
   const [selectedService, setSelectedService] = useState<ServiceObject | null>(
     null,
   );
-
-  const endpointSlicesList = Object.values(endpointSlices);
 
   return (
     <div className="flex 2xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
@@ -28,9 +25,7 @@ export default function ServicePage() {
           getResourceId={(service) =>
             `${service.metadata.namespace}/${service.metadata.name}`
           }
-          getResourceStatus={(service) =>
-            serviceStatus(service, endpointSlicesList)
-          }
+          getResourceStatus={(service) => getStatus(service)}
           onResourceSelect={(id) =>
             setSelectedService(servicesData[id] || null)
           }

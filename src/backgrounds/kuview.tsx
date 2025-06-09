@@ -58,20 +58,18 @@ export default function KuviewBackground() {
 
 function SyncKubernetes() {
   useKubernetesAtomSyncHook();
-
   const kubernetes = useAtomValue(kubernetesAtom);
-  const gvks = Object.keys(kubernetes).filter(
+  const gvks = Object.keys(kubernetes);
+  const normalGVKs = gvks.filter(
     (gvk) =>
       gvk !== "v1/Service" && gvk !== "discovery.k8s.io/v1/EndpointSlice",
   );
-  console.log("gvks", gvks);
   return (
     <>
-      {gvks.map((gvk) => (
+      {normalGVKs.map((gvk) => (
         <SyncKubernetesGVK key={gvk} gvk={gvk} />
       ))}
-      {kubernetes["discovery.k8s.io/v1/EndpointSlice"] &&
-        kubernetes["v1/Service"] && <SyncService />}
+      <SyncService />
     </>
   );
 }

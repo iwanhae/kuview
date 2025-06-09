@@ -1,4 +1,4 @@
-import type { ServiceObject, EndpointSliceObject } from "@/lib/kuview";
+import type { ServiceObject } from "@/lib/kuview";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,26 +9,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useKuview } from "@/hooks/useKuview";
-import { serviceStatus, getStatusColor } from "@/lib/status";
+import { getStatusColor, getStatus } from "@/lib/status";
 
 interface ServicesGridProps {
   title?: string;
   services: ServiceObject[];
 }
 
-const getServiceColor = (
-  service: ServiceObject,
-  endpointSlices: EndpointSliceObject[],
-) => {
-  const status = serviceStatus(service, endpointSlices);
+const getServiceColor = (service: ServiceObject) => {
+  const status = getStatus(service);
   return getStatusColor(status.status);
 };
 
 const SERVICES_PER_PAGE = 100;
 
 export default function ServicesGrid({ title, services }: ServicesGridProps) {
-  const endpointSlices = useKuview("discovery.k8s.io/v1/EndpointSlice");
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(services.length / SERVICES_PER_PAGE);
@@ -84,8 +79,7 @@ export default function ServicesGrid({ title, services }: ServicesGridProps) {
           <div className="flex flex-wrap gap-0.5">
             <TooltipProvider>
               {currentServices.map((service) => {
-                const endpointSlicesList = Object.values(endpointSlices);
-                const status = serviceStatus(service, endpointSlicesList);
+                const status = getStatus(service);
 
                 return (
                   <Tooltip
@@ -93,7 +87,7 @@ export default function ServicesGrid({ title, services }: ServicesGridProps) {
                   >
                     <TooltipTrigger asChild>
                       <div
-                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 ${getServiceColor(service, endpointSlicesList)}`}
+                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 ${getServiceColor(service)}`}
                       />
                     </TooltipTrigger>
                     <TooltipContent>

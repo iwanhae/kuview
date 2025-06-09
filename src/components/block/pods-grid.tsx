@@ -1,5 +1,5 @@
 import type { PodObject } from "@/lib/kuview";
-import { getStatusColor, podStatus } from "@/lib/status";
+import { getStatusColor, getStatus } from "@/lib/status";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ interface PodsGridProps {
   pods: PodObject[];
 }
 
-const getPodColor = (pod: PodObject) => getStatusColor(podStatus(pod).status);
+const getPodColor = (pod: PodObject) => getStatusColor(getStatus(pod).status);
 const PODS_PER_PAGE = 100;
 
 export default function PodsGrid({ title, pods }: PodsGridProps) {
@@ -97,7 +97,7 @@ export default function PodsGrid({ title, pods }: PodsGridProps) {
                         Namespace: {pod.metadata.namespace}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Status: {podStatus(pod).status}
+                        Status: {getStatus(pod).status}
                       </p>
                     </div>
                   </TooltipContent>

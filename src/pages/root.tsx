@@ -4,19 +4,13 @@ import NodesResourceTable from "@/components/block/nodes-resource-table";
 import { useKuview } from "@/hooks/useKuview";
 import { PREFIX } from "@/lib/const";
 import type { Status } from "@/lib/status";
-import {
-  namespaceStatus,
-  nodeStatus,
-  podStatus,
-  serviceStatus,
-} from "@/lib/status";
+import { getStatus } from "@/lib/status";
 
 export default function Root() {
   const nodes = useKuview("v1/Node");
   const pods = useKuview("v1/Pod");
   const namespaces = useKuview("v1/Namespace");
   const services = useKuview("v1/Service");
-  const endpointSlices = useKuview("discovery.k8s.io/v1/EndpointSlice");
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -33,7 +27,7 @@ export default function Root() {
           resourceName="Nodes"
           status={Object.values(nodes).reduce(
             (acc, node) => {
-              const status = nodeStatus(node).status;
+              const status = getStatus(node).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },
@@ -46,7 +40,7 @@ export default function Root() {
           resourceName="Namespaces"
           status={Object.values(namespaces).reduce(
             (acc, namespace) => {
-              const status = namespaceStatus(namespace).status;
+              const status = getStatus(namespace).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },
@@ -59,7 +53,7 @@ export default function Root() {
           resourceName="Pods"
           status={Object.values(pods).reduce(
             (acc, pod) => {
-              const status = podStatus(pod).status;
+              const status = getStatus(pod).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },
@@ -72,10 +66,7 @@ export default function Root() {
           resourceName="Services"
           status={Object.values(services).reduce(
             (acc, service) => {
-              const status = serviceStatus(
-                service,
-                Object.values(endpointSlices),
-              ).status;
+              const status = getStatus(service).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },

@@ -12,7 +12,7 @@ import PodStatusComponent from "./pod-status";
 import { cn } from "@/lib/utils";
 import PodsGrid from "./pods-grid";
 import { useKuview } from "@/hooks/useKuview";
-import { podStatus } from "@/lib/status";
+import { getStatus } from "@/lib/status";
 import { getStatusColor } from "@/lib/status";
 import PodLogs from "./pod-logs";
 
@@ -37,7 +37,7 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
       </div>
 
       {(() => {
-        const condition = podStatus(pod);
+        const condition = getStatus(pod);
         return (
           <div className="flex items-center gap-2">
             <div className={`w-5 h-5 ${getStatusColor(condition.status)}`} />

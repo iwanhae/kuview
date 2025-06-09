@@ -3,7 +3,7 @@ import { useState } from "react";
 import SearchComponent from "@/components/block/search";
 import PodDetail from "@/components/block/pod-detail";
 import type { PodObject } from "@/lib/kuview";
-import { podStatus } from "@/lib/status";
+import { getStatus } from "@/lib/status";
 
 export default function PodPage() {
   const podsData = useKuview("v1/Pod");
@@ -21,7 +21,7 @@ export default function PodPage() {
         <SearchComponent<PodObject>
           resources={Object.values(podsData)}
           getResourceId={(po) => `${po.metadata.namespace}/${po.metadata.name}`}
-          getResourceStatus={podStatus}
+          getResourceStatus={getStatus}
           onResourceSelect={(id) => setSelectedPod(podsData[id] || null)}
           selectedResourceId={`${selectedPod?.metadata.namespace}/${selectedPod?.metadata.name}`}
           resourceTypeName="pod"

@@ -9,7 +9,7 @@ import { useState } from "react";
 import MetadataComponent from "./metadata";
 import { cn } from "@/lib/utils";
 import { useKuview } from "@/hooks/useKuview";
-import { serviceStatus, getStatusColor } from "@/lib/status";
+import { getStatusColor, getStatus } from "@/lib/status";
 import ServiceSpecComponent from "./service-spec";
 import ServiceStatusComponent from "./service-status";
 import PodsGrid from "./pods-grid";
@@ -24,10 +24,7 @@ export default function ServiceDetail({
   className,
 }: ServiceDetailProps) {
   const pods = useKuview("v1/Pod");
-  const endpointSlices = useKuview("discovery.k8s.io/v1/EndpointSlice");
   const [jsonExpanded, setJsonExpanded] = useState(false);
-
-  const endpointSlicesList = Object.values(endpointSlices);
 
   const serviceSelector = service.spec.selector;
   const targetPods = serviceSelector
@@ -55,7 +52,7 @@ export default function ServiceDetail({
 
       {/* Status */}
       {(() => {
-        const condition = serviceStatus(service, endpointSlicesList);
+        const condition = getStatus(service);
         return (
           <div className="flex items-center gap-2">
             <div className={`w-5 h-5 ${getStatusColor(condition.status)}`} />

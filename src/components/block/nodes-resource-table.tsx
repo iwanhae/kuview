@@ -1,7 +1,7 @@
 import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject } from "@/lib/kuview";
 import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
-import { nodeStatus, Status } from "@/lib/status";
+import { getStatus, Status } from "@/lib/status";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ function calculateNodeResourceData(
         requestsPercentage: 0,
         limitsPercentage: 0,
       },
-      status: nodeStatus(node).status,
+      status: getStatus(node).status,
     };
   });
 

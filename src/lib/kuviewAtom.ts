@@ -7,13 +7,18 @@ import type {
   ServiceObject,
 } from "./kuview";
 import { useEffect } from "react";
-import { getStatus } from "./status";
+import { calcStatus } from "./status";
 
 const DEBOUNCE_MS = 100;
 
 export const kubernetesAtom = atom<
   Record<string /* GroupVersionKind */, ObjectAtom>
->({});
+>({
+  "v1/Service": atom<Record<string, KubernetesObject>>({}),
+  "discovery.k8s.io/v1/EndpointSlice": atom<Record<string, KubernetesObject>>(
+    {},
+  ),
+});
 
 type ObjectAtom = PrimitiveAtom<
   Record<string /* NamespaceName */, KubernetesObject>
@@ -58,7 +63,7 @@ export function useGVKSyncHook(gvk: string) {
         ? `${metadata.namespace}/${metadata.name}`
         : metadata.name;
 
-      if (type === "UPSERT") object.kuviewExtra = { ...getStatus(object) };
+      if (type === "UPSERT") object.kuviewExtra = { ...calcStatus(object) };
 
       switch (type) {
         case "UPSERT":
@@ -194,7 +199,7 @@ export function useServiceEndpointSliceSyncHook() {
 
     // 5. update status of services
     for (const service of Object.values(services) as ServiceObject[]) {
-      const condition = getStatus(service);
+      const condition = calcStatus(service);
       if (service.kuviewExtra) {
         service.kuviewExtra.status = condition.status;
         service.kuviewExtra.reason = condition.reason;
