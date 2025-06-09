@@ -90,6 +90,7 @@ export function useGVKSyncHook(gvk: string) {
   useEffect(() => {
     const interval = setInterval(sync, DEBOUNCE_MS);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
 
@@ -227,5 +228,6 @@ export function useServiceEndpointSliceSyncHook() {
   useEffect(() => {
     const interval = setInterval(sync, DEBOUNCE_MS);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
