@@ -247,7 +247,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
             <Row
               key={getResourceId(resource)}
               resource={resource}
-              resourceCurrentStatus={getResourceStatus(resource).status}
+              resourceCurrentStatus={getResourceStatus(resource)}
               selectedResourceId={selectedResourceId}
               onResourceSelect={handleResourceSelectInternal}
               getResourceId={getResourceId}
@@ -281,7 +281,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
 
 interface RowProps<T extends BaseKubeObject> {
   resource: T;
-  resourceCurrentStatus: Status;
+  resourceCurrentStatus: Condition;
   selectedResourceId?: string;
   onResourceSelect?: (resourceId: string) => void;
   getResourceId: (resource: T) => string;
@@ -297,7 +297,7 @@ const Row = <T extends BaseKubeObject>({
   const resourceId = getResourceId(resource);
   const isSelected = selectedResourceId === resourceId;
   const statusColor =
-    STATUS_COLORS[resourceCurrentStatus]?.color || "bg-gray-500";
+    STATUS_COLORS[resourceCurrentStatus.status]?.color || "bg-gray-500";
 
   return (
     <div
@@ -310,13 +310,18 @@ const Row = <T extends BaseKubeObject>({
         <div
           className={`w-2 h-2 rounded-full mr-2 animate-pulse ${statusColor}`}
         />
-        <span
-          className={`text-sm font-mono ${
-            isSelected ? "text-blue-700 font-medium" : "text-gray-900"
-          }`}
-        >
-          {resourceId}
-        </span>
+        <div className="flex flex-col">
+          <span
+            className={`text-sm font-mono ${
+              isSelected ? "text-blue-700 font-medium" : "text-gray-900"
+            }`}
+          >
+            {resourceId}
+          </span>
+          <span className="text-xs text-gray-500">
+            {resourceCurrentStatus.reason}
+          </span>
+        </div>
       </div>
     </div>
   );
