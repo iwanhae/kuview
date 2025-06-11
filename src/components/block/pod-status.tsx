@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState } from "react";
+import dayjs from "dayjs";
 
 interface PodStatusProps {
   status: PodObject["status"];
@@ -283,11 +284,41 @@ export default function PodStatusComponent({ status }: PodStatusProps) {
                       </span>
                       <div className="mt-1">
                         {container.lastState.terminated && (
-                          <Badge variant="outline" className="text-xs">
-                            Terminated:{" "}
-                            {container.lastState.terminated.reason || "Unknown"}{" "}
-                            (Exit: {container.lastState.terminated.exitCode})
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex gap-1">
+                              <Badge
+                                variant="outline"
+                                className={getContainerStateColor({
+                                  terminated: true,
+                                })}
+                              >
+                                Terminated:{` `}
+                                {container.lastState.terminated.reason ||
+                                  "Unknown"}{" "}
+                                (Exit: {container.lastState.terminated.exitCode}
+                                )
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="text-muted-foreground"
+                              >
+                                {[
+                                  container.lastState.terminated.startedAt,
+                                  container.lastState.terminated.finishedAt,
+                                ]
+                                  .filter((t) => t !== undefined)
+                                  .map((t) =>
+                                    dayjs(t).format("YYYY-MM-DDTHH:mm:ssZ"),
+                                  )
+                                  .join(" ~ ")}
+                              </Badge>
+                            </div>
+                            {container.lastState.terminated.message && (
+                              <div className="text-xs bg-muted p-1 rounded whitespace-pre-wrap">
+                                {container.lastState.terminated.message}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
