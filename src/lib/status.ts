@@ -17,6 +17,15 @@ export enum Status {
   Terminating = "Terminating",
 }
 
+export const STATUS_ORDER = [
+  Status.Error,
+  Status.Warning,
+  Status.Terminating,
+  Status.Pending,
+  Status.Running,
+  Status.Done,
+];
+
 export const STATUS_COLORS = {
   [Status.Running]: {
     color: "bg-emerald-500",
