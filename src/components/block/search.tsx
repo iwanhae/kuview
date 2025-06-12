@@ -242,7 +242,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
           </p>
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg overflow-hidden h-[200px] 2xl:h-full overflow-y-auto">
+        <div className="border border-gray-200 rounded-lg overflow-hidden h-[200px] 2xl:h-[50vh] overflow-y-auto">
           {paginatedResources.map((resource) => (
             <Row
               key={getResourceId(resource)}
