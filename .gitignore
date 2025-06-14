@@ -90,4 +90,5 @@ go.work.sum
 # .idea/
 # .vscode/
 
-vendor/
+vendor/*
+vendor

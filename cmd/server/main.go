@@ -2,12 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
-	"os"
-	"sync"
+	"net/http"
 
 	"github.com/iwanhae/kuview/pkg/controller"
+	"github.com/iwanhae/kuview/pkg/server"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,18 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type EventEmitter struct {
-	mu *sync.Mutex
-}
-
-func (e *EventEmitter) Emit(v *controller.Event) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	json.NewEncoder(os.Stdout).Encode(v)
-}
-
 func main() {
 	cfg := ctrl.GetConfigOrDie()
+
+	s := server.New()
 
 	mgr, err := controller.New(
 		*cfg,
@@ -37,11 +28,13 @@ func main() {
 			&v1.Service{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"}},
 			&discoveryv1.EndpointSlice{TypeMeta: metav1.TypeMeta{APIVersion: "discovery.k8s.io/v1", Kind: "EndpointSlice"}},
 		},
-		&EventEmitter{mu: &sync.Mutex{}},
+		s,
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go http.ListenAndServe(":8080", s)
 
 	if err := mgr.Start(context.Background()); err != nil {
 		log.Fatal(err)

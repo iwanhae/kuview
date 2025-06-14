@@ -1,15 +1,14 @@
 package controller
 
-import "k8s.io/apimachinery/pkg/runtime"
-
+import "sigs.k8s.io/controller-runtime/pkg/client"
 
 type Emitter interface {
 	Emit(v *Event)
 }
 
 type Event struct {
-	Type   EventType      `json:"type"`
-	Object runtime.Object `json:"object"`
+	Type   EventType     `json:"type"`
+	Object client.Object `json:"object"`
 }
 
 type EventType string
