@@ -10,9 +10,6 @@
 
 <body>
   <script>
-    console.log("[Main] Initializing Web Worker for KuView WASM.");
-    const worker = new Worker("/static/worker.js");
-
     window.kuviewEventQueue = [];
 
     // Temporary event handler to queue events before React is fully ready
@@ -22,47 +19,67 @@
       window.kuviewEventQueue.push(event);
     };
 
-    worker.onmessage = (e) => {
-      if (e.data && e.data.type === "WORKER_ERROR") {
-        console.error("[Main] Received error from worker:", e.data.error);
-        const rootDiv = document.getElementById("root");
-        if (rootDiv) {
-          rootDiv.innerHTML =
-            '<p style="color: red; font-family: sans-serif; padding: 20px;">' +
-            "Error initializing WebAssembly worker: " +
-            e.data.error +
-            "<br/>Please check the console for more details.</p>";
+    const errorDiv = document.getElementById("error");
+
+    fetch("/kuview/available").
+      then((res) => {
+        console.log("[Main] Checking if KuView is available:", res);
+        if (res.status !== 200) {
+          throw new Error("KuView is not running");
         }
-        return;
-      }
+      }).then(() => {
+        console.log("[Main] Running in Server Mode");
+        const source = new EventSource("/kuview");
+        source.onmessage = (e) => {
+          const event = JSON.parse(e.data);
+          window.kuview(event);
+        };
+        source.onerror = (e) => {
+          console.error("[Main] Error from /kuview:", e);
+          errorDiv.innerHTML =
+            '<p style="color: red; font-family: sans-serif; padding: 20px;">' +
+            "Error from /kuview: " +
+            e.message +
+            "<br/>Please check the console for more details.</p>";
+        };
+      }).catch(() => {
+        console.log("[Main] Running in WASM Mode");
+        console.log("[Main] Initializing Web Worker for KuView WASM.");
+        const worker = new Worker("/static/worker.js");
 
-      for (const event of e.data) {
-        window.kuview(event);
-      }
-    };
+        worker.onmessage = (e) => {
+          if (e.data && e.data.type === "WORKER_ERROR") {
+            console.error("[Main] Received error from worker:", e.data.error);
+            errorDiv.innerHTML =
+              '<p style="color: red; font-family: sans-serif; padding: 20px;">' +
+              "Error initializing WebAssembly worker: " +
+              e.data.error +
+              "<br/>Please check the console for more details.</p>";
+            return;
+          }
 
-    worker.onerror = (error) => {
-      console.error("[Main] Error from worker:", JSON.stringify(error));
-      const rootDiv = document.getElementById("worker-error");
-      if (rootDiv) {
-        rootDiv.innerHTML =
-          '<p style="color: red; font-family: sans-serif; padding: 20px;">' +
-          "Critical error with WebAssembly worker: " +
-          error.message +
-          "<br/>Please check the console for more details and refresh the page.</p>";
-      }
-    };
+          for (const event of e.data) {
+            window.kuview(event);
+          }
+        };
 
-    worker.postMessage({
-      type: "INIT_WORKER",
-      host: `${location.protocol}//${location.host}`,
-    });
-    console.log(
-      "[Main] Sent INIT_WORKER to worker with host:",
-      `${location.protocol}//${location.host}`,
-    );
+        worker.onerror = (error) => {
+          console.error("[Main] Error from worker:", JSON.stringify(error));
+          errorDiv.innerHTML =
+            '<p style="color: red; font-family: sans-serif; padding: 20px;">' +
+            "Critical error with WebAssembly worker: " +
+            error.message +
+            "<br/>Please check the console for more details and refresh the page.</p>";
+        };
+
+        worker.postMessage({
+          type: "INIT_WORKER",
+          host: `${location.protocol}//${location.host}`,
+        });
+      })
+
   </script>
-  <div id="worker-error"></div>
+  <div id="error"></div>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

@@ -24,7 +24,7 @@ func init() {
 	clog.SetLogger(logger)
 }
 
-func New(cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manager, error) {	
+func New(cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manager, error) {
 	mgr, err := manager.New(&cfg, manager.Options{
 		LeaderElection:   false,
 		Metrics:          server.Options{BindAddress: "0"},
@@ -39,19 +39,20 @@ func New(cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manage
 		// Get dereferenced type of the object
 		T := reflect.TypeOf(obj).Elem()
 		c, err := controller.New(
-			fmt.Sprintf("kuview_%s", obj.GetObjectKind().GroupVersionKind().String()), 
+			fmt.Sprintf("kuview_%s", obj.GetObjectKind().GroupVersionKind().String()),
 			mgr, controller.Options{
-			Reconciler: &dummyReconciler{
-				T: T,
-				client: mgr.GetClient(),
-				emitter: emitter,
-			},
-		})
+				Reconciler: &dummyReconciler{
+					T:       T,
+					obj:     obj,
+					client:  mgr.GetClient(),
+					emitter: emitter,
+				},
+			})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create controller: %w", err)
 		}
 		err = c.Watch(
-			source.Kind(mgr.GetCache(),obj,
+			source.Kind(mgr.GetCache(), obj,
 				&handler.TypedEnqueueRequestForObject[client.Object]{},
 			),
 		)
@@ -62,5 +63,3 @@ func New(cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manage
 
 	return mgr, nil
 }
-
-

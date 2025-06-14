@@ -18,6 +18,7 @@ func main() {
 	cfg := ctrl.GetConfigOrDie()
 
 	s := server.New()
+	go http.ListenAndServe(":8080", s)
 
 	mgr, err := controller.New(
 		*cfg,
@@ -33,8 +34,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	go http.ListenAndServe(":8080", s)
 
 	if err := mgr.Start(context.Background()); err != nil {
 		log.Fatal(err)

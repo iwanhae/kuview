@@ -39,7 +39,13 @@ func New() *Server {
 	s.Use(echomiddleware.GzipWithConfig(echomiddleware.GzipConfig{
 		Level: gzip.BestCompression,
 	}))
-	s.Use(echomiddleware.StaticWithConfig(echomiddleware.StaticConfig{
+	static := s.Group("/static")
+	static.Use(echomiddleware.RewriteWithConfig(echomiddleware.RewriteConfig{
+		Rules: map[string]string{
+			"/static/*": "/$1",
+		},
+	}))
+	static.Use(echomiddleware.StaticWithConfig(echomiddleware.StaticConfig{
 		Root:  "dist",
 		HTML5: true,
 	}))
@@ -52,7 +58,13 @@ func New() *Server {
 	}))
 	s.Use(echomiddleware.CORS())
 
+	s.GET("/", func(c echo.Context) error {
+		return c.Redirect(http.StatusTemporaryRedirect, "/static")
+	})
 	s.GET("/kuview", s.subscribe)
+	s.GET("/kuview/available", func(c echo.Context) error {
+		return c.String(http.StatusOK, "yes")
+	})
 
 	return s
 }
