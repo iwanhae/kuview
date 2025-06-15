@@ -1,6 +1,6 @@
 import type { PodObject } from "@/lib/kuview";
 import { getStatusColor, getStatus, STATUS_ORDER } from "@/lib/status";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PodsGridProps {
   title?: string;
+  href?: string;
   pods: PodObject[];
 }
 
 const getPodColor = (pod: PodObject) => getStatusColor(getStatus(pod).status);
 const PODS_PER_PAGE = 100;
 
-export default function PodsGrid({ title, pods }: PodsGridProps) {
+export default function PodsGrid({ title, href, pods }: PodsGridProps) {
   const [, setLocation] = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -52,7 +53,16 @@ export default function PodsGrid({ title, pods }: PodsGridProps) {
     <Card className="gap-3 pt-3 pb-5">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          {title || "Pods"} ({pods.length})
+          {href && (
+            <Link href={href ?? "#"}>
+              {title || "Pods"} ({pods.length})
+            </Link>
+          )}
+          {!href && (
+            <p>
+              {title || "Pods"} ({pods.length})
+            </p>
+          )}
           {shouldShowPagination && (
             <div className="flex items-center gap-2">
               <Button

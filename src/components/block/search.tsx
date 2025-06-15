@@ -142,17 +142,6 @@ export default function SearchComponent<T extends BaseKubeObject>(
     paramString,
   ]);
 
-  // If the selected statuses change, update the URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (selectedStatuses.length > 0) {
-      params.set(urlFilterParam, selectedStatuses.join(","));
-    } else {
-      params.delete(urlFilterParam);
-    }
-    history.pushState(null, "", `?${params.toString()}`);
-  }, [selectedStatuses, urlFilterParam]);
-
   // Pagination
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));

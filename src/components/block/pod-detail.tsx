@@ -16,6 +16,7 @@ import { getStatus } from "@/lib/status";
 import { getStatusColor } from "@/lib/status";
 import PodLogs from "./pod-logs";
 import PodResourceUsage from "./pod-resource-usage";
+import { PREFIX } from "@/lib/const";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -55,6 +56,11 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
       {/* Pods in the same node */}
       <PodsGrid
         title={`Node "${pod.spec.nodeName}"`}
+        href={
+          pod.spec.nodeName
+            ? `${PREFIX}/nodes?node=${encodeURIComponent(pod.spec.nodeName)}`
+            : undefined
+        }
         pods={Object.values(pods).filter(
           (p) => p.spec.nodeName === pod.spec.nodeName,
         )}
@@ -63,6 +69,7 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
       {/* Pods in the same namespace */}
       <PodsGrid
         title={`Namespace "${pod.metadata.namespace}"`}
+        href={`${PREFIX}/namespaces?namespace=${encodeURIComponent(pod.metadata.namespace ?? "")}`}
         pods={Object.values(pods).filter(
           (p) => p.metadata.namespace === pod.metadata.namespace,
         )}
