@@ -70,7 +70,6 @@ export function useGVKSyncHook(gvk: string) {
           objects[nn] = object;
           break;
         case "DELETE":
-          console.log("DELETE", gvk, nn);
           delete objects[nn];
           break;
       }

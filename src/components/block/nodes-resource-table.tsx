@@ -24,6 +24,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import dayjs from "dayjs";
 
 interface NodeResourceData {
   node: NodeObject;
@@ -373,21 +374,11 @@ export default function NodesResourceTable() {
 
   useEffect(() => {
     if (passiveMode) return;
-    const now = Date.now();
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
       podMetrics: rawPodMetrics,
     });
-    const diff = Date.now() - now;
-    // if diff is bigger than 33ms, it means it takes more than 1 frame to calculate.
-    if (diff > 33) {
-      setPassiveMode(true);
-      console.log(
-        "[REACT] Passive mode activated due to slow calculation",
-        diff,
-      );
-    }
   }, [rawNodes, rawPods, rawPodMetrics, passiveMode]);
 
   const handleRefresh = () => {
@@ -406,26 +397,30 @@ export default function NodesResourceTable() {
     }));
   };
 
-  const nodeResourceData = useMemo(
-    () => {
-      return calculateNodeResourceData(
-        dataForCalculation.nodes,
-        dataForCalculation.pods,
-        dataForCalculation.podMetrics,
-      );
-    }, // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      Object.values(dataForCalculation.nodes)
-        .map(
-          (n) =>
-            `${n.metadata.name}_${n.status.capacity?.cpu}_${n.status.capacity?.memory}`,
-        )
-        .join(","),
+  const nodeResourceData = useMemo(() => {
+    const since = dayjs();
+    const result = calculateNodeResourceData(
+      dataForCalculation.nodes,
       dataForCalculation.pods,
       dataForCalculation.podMetrics,
-    ],
-  );
+    );
+    const diff = Math.abs(since.diff());
+    console.log(diff);
+    // if diff is bigger than 16ms, it means it takes more than 1 frame to calculate.
+    if (diff > 16) {
+      setPassiveMode(true);
+      console.log(
+        "[REACT] Passive mode activated due to slow calculation",
+        diff,
+      );
+    }
+    return result;
+  }, [
+    dataForCalculation.nodes,
+    dataForCalculation.pods,
+    dataForCalculation.podMetrics,
+    setPassiveMode,
+  ]);
 
   // Sort and filter data
   const sortedAndFilteredData = useMemo(() => {
@@ -497,7 +492,7 @@ export default function NodesResourceTable() {
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-h-[325px] overflow-y-scroll">
         <Table>
           <TableHeader>
             <TableRow>

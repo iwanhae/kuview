@@ -8,6 +8,7 @@ import { ResourceRadialChart } from "./resource-radial-chart";
 import type { ResourceData } from "./pod-resource-usage";
 import { useState, useMemo, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
+import dayjs from "dayjs";
 
 interface ClusterResourceUsage {
   cpu: {
@@ -145,21 +146,11 @@ export default function ClusterResourceOverview() {
 
   useEffect(() => {
     if (passiveMode) return;
-    const now = Date.now();
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
       podMetrics: rawPodMetrics,
     });
-    const diff = Date.now() - now;
-    // if diff is bigger than 33ms, it means it takes more than 1 frame to calculate.
-    if (diff > 33) {
-      setPassiveMode(true);
-      console.log(
-        "[REACT] Passive mode activated due to slow calculation",
-        diff,
-      );
-    }
   }, [rawNodes, rawPods, rawPodMetrics, passiveMode]);
 
   const handleRefresh = () => {
@@ -171,11 +162,23 @@ export default function ClusterResourceOverview() {
   };
 
   const clusterUsage = useMemo(() => {
-    return calculateClusterResourceUsage(
+    const since = dayjs();
+    const result = calculateClusterResourceUsage(
       dataForCalculation.nodes,
       dataForCalculation.pods,
       dataForCalculation.podMetrics,
     );
+
+    const diff = Math.abs(since.diff());
+    // if diff is bigger than 16ms, it means it takes more than 1 frame to calculate.
+    if (diff > 16) {
+      setPassiveMode(true);
+      console.log(
+        "[REACT] Passive mode activated due to slow calculation",
+        diff,
+      );
+    }
+    return result;
   }, [dataForCalculation]);
 
   // Prepare CPU chart data
