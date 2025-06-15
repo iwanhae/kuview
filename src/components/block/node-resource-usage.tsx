@@ -190,14 +190,14 @@ export default function NodeResourceUsage({ node }: NodeResourceUsageProps) {
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ResourceRadialChart
           title="CPU"
-          nodeCapacity={resourceUsage.cpu.capacity}
+          capacity={resourceUsage.cpu.capacity}
           data={cpuData}
           chartConfig={cpuChartConfig}
           formatValue={formatCpu}
         />
         <ResourceRadialChart
           title="Memory"
-          nodeCapacity={resourceUsage.memory.capacity}
+          capacity={resourceUsage.memory.capacity}
           data={memoryData}
           chartConfig={memoryChartConfig}
           formatValue={formatBytes}

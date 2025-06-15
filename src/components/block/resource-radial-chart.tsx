@@ -19,7 +19,7 @@ import { RadialBar, RadialBarChart, PolarAngleAxis } from "recharts";
 
 interface ResourceRadialChartProps {
   title: string;
-  nodeCapacity: number;
+  capacity: number;
   data: ResourceData[];
   chartConfig: ChartConfig;
   formatValue: (value: number) => string;
@@ -27,7 +27,7 @@ interface ResourceRadialChartProps {
 
 export function ResourceRadialChart({
   title,
-  nodeCapacity,
+  capacity: nodeCapacity,
   data,
   chartConfig,
   formatValue,
@@ -38,9 +38,7 @@ export function ResourceRadialChart({
     <Card className="flex flex-col h-full">
       <CardHeader className="items-center pb-0">
         <CardTitle>{title}</CardTitle>
-        <CardDescription>
-          Node Capacity: {formatValue(nodeCapacity)}
-        </CardDescription>
+        <CardDescription>Capacity: {formatValue(nodeCapacity)}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer

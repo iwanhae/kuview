@@ -242,7 +242,7 @@ export default function PodResourceUsage({ pod }: PodResourceUsageProps) {
       {cpuData.length > 0 && (
         <ResourceRadialChart
           title="CPU"
-          nodeCapacity={nodeCpuCapacity}
+          capacity={nodeCpuCapacity}
           data={cpuData}
           chartConfig={cpuChartConfig}
           formatValue={formatCpu}
@@ -251,7 +251,7 @@ export default function PodResourceUsage({ pod }: PodResourceUsageProps) {
       {memoryData.length > 0 && (
         <ResourceRadialChart
           title="Memory"
-          nodeCapacity={nodeMemoryCapacity}
+          capacity={nodeMemoryCapacity}
           data={memoryData}
           chartConfig={memoryChartConfig}
           formatValue={formatBytes}
