@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { formatBytes } from "@/lib/utils";
 
 interface NodeStatusProps {
   status: NodeObject["status"];
@@ -21,19 +22,6 @@ const getConditionStatusColor = (status: string) => {
     default:
       return "bg-yellow-100 text-yellow-800";
   }
-};
-
-const formatBytes = (bytes: string) => {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = parseInt(bytes.replace(/[^\d]/g, ""));
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
 };
 
 export default function NodeStatusComponent({ status }: NodeStatusProps) {
@@ -336,7 +324,7 @@ export default function NodeStatusComponent({ status }: NodeStatusProps) {
                       </div>
                       {image.sizeBytes && (
                         <Badge variant="outline" className="text-xs ml-2">
-                          {formatBytes(image.sizeBytes.toString())}
+                          {formatBytes(image.sizeBytes)}
                         </Badge>
                       )}
                     </div>
