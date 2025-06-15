@@ -7,9 +7,10 @@ require (
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/minio/minio-go/v7 v7.0.92
 	github.com/rs/zerolog v1.34.0
-	k8s.io/api v0.33.0
-	k8s.io/apimachinery v0.33.0
-	k8s.io/client-go v0.33.0
+	k8s.io/api v0.33.1
+	k8s.io/apimachinery v0.33.1
+	k8s.io/client-go v0.33.1
+	k8s.io/metrics v0.33.1
 	sigs.k8s.io/controller-runtime v0.21.0
 )
 
