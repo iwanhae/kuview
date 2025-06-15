@@ -1,98 +1,10 @@
-import type { Condition } from "./status";
+import type {
+  KubernetesObject,
+  Metadata,
+  ResourceList,
+  KeyToPath,
+} from "./types";
 
-export type KuviewEvent = {
-  type: "create" | "update" | "delete" | "generic";
-  object: KubernetesObject;
-};
-
-export interface KuviewExtra extends Condition {
-  [key: string]: unknown;
-}
-
-export interface KuviewObjectMap {
-  "v1/Pod": PodObject;
-  "v1/Service": ServiceObject;
-  "v1/Node": NodeObject;
-  "v1/Namespace": NamespaceObject;
-  "discovery.k8s.io/v1/EndpointSlice": EndpointSliceObject;
-}
-
-export type GVK = keyof KuviewObjectMap;
-
-export type KuviewObjectType<T extends GVK> = KuviewObjectMap[T];
-
-export interface NamespaceObject extends KubernetesObject {
-  kind: "Namespace";
-  apiVersion: "v1";
-  metadata: Metadata;
-  spec: NamespaceSpec;
-  status: NamespaceStatus;
-}
-
-interface NamespaceSpec {
-  finalizers?: string[];
-}
-
-interface NamespaceStatus {
-  phase: string;
-}
-
-export interface KubernetesObject {
-  kind: string;
-  apiVersion: string;
-  metadata: Metadata;
-  finalizers?: string[];
-  spec: unknown;
-  status: unknown;
-
-  kuviewExtra?: KuviewExtra;
-}
-
-export interface Metadata {
-  name: string;
-  uid: string;
-  resourceVersion: string;
-  creationTimestamp: string;
-  labels?: Labels;
-  annotations?: Annotations;
-  finalizers?: string[];
-  namespace?: string;
-  deletionTimestamp?: string;
-  generateName?: string;
-  ownerReferences?: OwnerReference[];
-  deletionGracePeriodSeconds?: number;
-  generation?: number;
-  managedFields?: ManagedFieldsEntry[];
-}
-
-export interface ManagedFieldsEntry {
-  manager?: string;
-  operation?: "Apply" | "Update";
-  apiVersion?: string;
-  time?: string;
-  fieldsType?: string;
-  fieldsV1?: unknown;
-  subresource?: string;
-}
-
-export interface OwnerReference {
-  apiVersion: string;
-  blockOwnerDeletion?: boolean;
-  controller?: boolean;
-  kind: string;
-  name: string;
-  uid: string;
-}
-
-export interface Labels {
-  [key: string]: string | undefined;
-}
-
-export interface Annotations {
-  [key: string]: string | undefined;
-}
-
-// Specific object types
 export interface PodObject extends KubernetesObject {
   kind: "Pod";
   apiVersion: "v1";
@@ -101,27 +13,6 @@ export interface PodObject extends KubernetesObject {
   status: PodStatus;
 }
 
-export interface ServiceObject extends KubernetesObject {
-  kind: "Service";
-  apiVersion: "v1";
-  metadata: Metadata;
-  spec: ServiceSpec;
-  status: ServiceStatus;
-
-  kuviewExtra?: KuviewExtra & {
-    endpointSlices: Record<string /* EndpointSliceUID */, EndpointSliceObject>;
-  };
-}
-
-export interface NodeObject extends KubernetesObject {
-  kind: "Node";
-  apiVersion: "v1";
-  metadata: Metadata;
-  spec: NodeSpec;
-  status: NodeStatus;
-}
-
-// Specs and Status interfaces
 interface PodSpec {
   containers: Container[];
   initContainers?: Container[];
@@ -202,10 +93,6 @@ interface ContainerPort {
 interface ResourceRequirements {
   limits?: ResourceList;
   requests?: ResourceList;
-}
-
-interface ResourceList {
-  [key: string]: string;
 }
 
 interface VolumeMount {
@@ -313,12 +200,6 @@ interface ServiceAccountTokenProjection {
   path: string;
 }
 
-interface KeyToPath {
-  key: string;
-  path: string;
-  mode?: number;
-}
-
 interface DownwardAPIVolumeFile {
   fieldRef?: ObjectFieldSelector;
   mode?: number;
@@ -407,143 +288,4 @@ interface PodCondition {
   lastProbeTime?: string | null;
   message?: string;
   reason?: string;
-}
-
-interface ServiceSpec {
-  type?: string;
-  ports?: ServicePort[];
-  selector?: Record<string, string>;
-  clusterIP?: string;
-  externalIPs?: string[];
-}
-
-interface ServiceStatus {
-  loadBalancer?: {
-    ingress?: Array<{ ip?: string; hostname?: string }>;
-  };
-}
-
-interface ServicePort {
-  name?: string;
-  port: number;
-  targetPort?: number | string;
-  protocol?: string;
-  nodePort?: number;
-}
-
-interface NodeSpec {
-  podCIDR?: string;
-  podCIDRs?: string[];
-  unschedulable?: boolean;
-  providerID?: string;
-  taints?: NodeTaint[];
-}
-
-interface NodeTaint {
-  key: string;
-  value?: string;
-  effect: "NoSchedule" | "PreferNoSchedule" | "NoExecute";
-  timeAdded?: string;
-}
-
-interface NodeStatus {
-  conditions?: NodeCondition[];
-  addresses?: NodeAddress[];
-  allocatable?: ResourceList;
-  capacity?: ResourceList;
-  nodeInfo?: NodeSystemInfo;
-  daemonEndpoints?: NodeDaemonEndpoints;
-  images?: ContainerImage[];
-  phase?: "Pending" | "Running" | "Terminated";
-  volumesInUse?: string[];
-  volumesAttached?: AttachedVolume[];
-}
-
-interface NodeSystemInfo {
-  architecture: string;
-  bootID: string;
-  containerRuntimeVersion: string;
-  kernelVersion: string;
-  kubeProxyVersion: string;
-  kubeletVersion: string;
-  machineID: string;
-  operatingSystem: string;
-  osImage: string;
-  systemUUID: string;
-}
-
-interface NodeDaemonEndpoints {
-  kubeletEndpoint?: DaemonEndpoint;
-}
-
-interface DaemonEndpoint {
-  Port: number;
-}
-
-interface ContainerImage {
-  names: string[];
-  sizeBytes?: number;
-}
-
-interface AttachedVolume {
-  name: string;
-  devicePath: string;
-}
-
-interface NodeCondition {
-  type: string;
-  status: "True" | "False" | "Unknown";
-  lastTransitionTime: string;
-  lastHeartbeatTime?: string;
-  reason?: string;
-  message?: string;
-}
-
-interface NodeAddress {
-  type:
-    | "InternalIP"
-    | "ExternalIP"
-    | "Hostname"
-    | "InternalDNS"
-    | "ExternalDNS";
-  address: string;
-}
-
-export interface EndpointSliceObject extends KubernetesObject {
-  kind: "EndpointSlice";
-  apiVersion: "discovery.k8s.io/v1";
-  metadata: Metadata;
-  addressType: "IPv4" | "IPv6" | "FQDN";
-  endpoints?: Endpoint[];
-  ports?: EndpointPort[];
-}
-
-export interface Endpoint {
-  addresses: string[];
-  conditions?: EndpointConditions;
-  hostname?: string;
-  nodeName?: string;
-  targetRef?: ObjectReference;
-  zone?: string;
-}
-
-interface EndpointConditions {
-  ready: boolean;
-  serving: boolean;
-  terminating: boolean;
-}
-
-interface ObjectReference {
-  apiVersion?: string;
-  kind?: string;
-  name?: string;
-  namespace?: string;
-  uid?: string;
-}
-
-interface EndpointPort {
-  name?: string;
-  port: number;
-  protocol?: "TCP" | "UDP" | "SCTP";
-  appProtocol?: string;
 }
