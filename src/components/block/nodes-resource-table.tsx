@@ -111,14 +111,11 @@ function calculateNodeResourceData(
     }
   });
 
-  // Iterate over pod metrics to aggregate actual usage
+  // Iterate over pod metrics to aggregate actual usage (O(M) time)
   Object.values(podMetrics).forEach((podMetric) => {
-    // Find the pod to get its node name
-    const pod = Object.values(pods).find(
-      (p) =>
-        p.metadata.namespace === podMetric.metadata.namespace &&
-        p.metadata.name === podMetric.metadata.name,
-    );
+    // Find the pod to get its node name using the map (O(1) lookup)
+    const pod =
+      pods[`${podMetric.metadata.namespace}/${podMetric.metadata.name}`];
 
     if (pod && pod.spec.nodeName && nodeResourceMap[pod.spec.nodeName]) {
       const nodeData = nodeResourceMap[pod.spec.nodeName];
