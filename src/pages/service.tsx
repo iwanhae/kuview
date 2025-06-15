@@ -12,11 +12,11 @@ export default function ServicePage() {
   );
 
   return (
-    <div className="flex 2xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
+    <div className="flex xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
       {/* Left Panel - Service List */}
-      <div className="flex flex-col gap-6 w-full 2xl:w-1/2">
+      <div className="flex flex-col gap-6 w-full xl:w-1/2">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">Services</h1>
+          <h1 className="text-xl font-bold">Services</h1>
         </div>
 
         {/* Search */}
@@ -38,7 +38,7 @@ export default function ServicePage() {
 
       {/* Right Panel - Service Detail */}
       {selectedService && (
-        <ServiceDetail service={selectedService} className="w-full 2xl:w-1/2" />
+        <ServiceDetail service={selectedService} className="w-full xl:w-1/2" />
       )}
     </div>
   );

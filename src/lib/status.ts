@@ -270,6 +270,17 @@ function podStatus(pod: PodObject): Condition {
     };
   }
 
+  // Warning: Pod's condition with type "Ready" is not "True"
+  const readyCondition = pod.status.conditions?.find(
+    (condition) => condition.type === "Ready",
+  );
+  if (readyCondition && readyCondition.status !== "True") {
+    return {
+      status: Status.Warning,
+      reason: `Pod is not ready: ${readyCondition.message || readyCondition.reason || "Ready condition status is not True"}`,
+    };
+  }
+
   return {
     status: Status.Running,
     reason: `status.phase is "Running"`,

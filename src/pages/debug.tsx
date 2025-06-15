@@ -19,7 +19,7 @@ export default function Debug() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl mb-4">Treemap Demo</h1>
+      <h1 className="text-xl mb-4">Treemap Demo</h1>
       <Treemap items={sampleItems} width={600} height={600} />
     </div>
   );

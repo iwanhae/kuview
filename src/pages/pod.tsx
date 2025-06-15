@@ -10,11 +10,11 @@ export default function PodPage() {
   const [selectedPod, setSelectedPod] = useState<PodObject | null>(null);
 
   return (
-    <div className="flex 2xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
+    <div className="flex xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
       {/* Left Panel - Pod List */}
-      <div className="flex flex-col gap-6 w-full 2xl:w-1/2">
+      <div className="flex flex-col gap-6 w-full xl:w-1/2">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">Pods</h1>
+          <h1 className="text-xl font-bold">Pods</h1>
         </div>
 
         {/* Search */}
@@ -32,7 +32,7 @@ export default function PodPage() {
 
       {/* Right Panel - Pod Detail */}
       {selectedPod && (
-        <PodDetail pod={selectedPod} className="w-full 2xl:w-1/2" />
+        <PodDetail pod={selectedPod} className="w-full xl:w-1/2" />
       )}
     </div>
   );

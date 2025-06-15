@@ -11,11 +11,11 @@ export default function NamespacePage() {
     useState<NamespaceObject | null>(null);
 
   return (
-    <div className="flex 2xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
+    <div className="flex xl:flex-row flex-col w-full justify-evenly gap-6 p-4 pt-0">
       {/* Left Panel - Namespace List */}
-      <div className="flex flex-col gap-6 w-full 2xl:w-1/2">
+      <div className="flex flex-col gap-6 w-full xl:w-1/2">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">Namespaces</h1>
+          <h1 className="text-xl font-bold">Namespaces</h1>
         </div>
 
         {/* Search */}
@@ -37,7 +37,7 @@ export default function NamespacePage() {
       {selectedNamespace && (
         <NamespaceDetail
           namespace={selectedNamespace}
-          className="w-full 2xl:w-1/2"
+          className="w-full xl:w-1/2"
         />
       )}
     </div>

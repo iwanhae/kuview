@@ -29,7 +29,13 @@ export default function PodsGrid({ title, href, pods }: PodsGridProps) {
   const totalPages = Math.ceil(pods.length / PODS_PER_PAGE);
   const startIndex = (currentPage - 1) * PODS_PER_PAGE;
   const endIndex = startIndex + PODS_PER_PAGE;
-  const currentPods = pods.slice(startIndex, endIndex);
+  const currentPods = pods
+    .sort(
+      (a, b) =>
+        STATUS_ORDER.indexOf(getStatus(a).status) -
+        STATUS_ORDER.indexOf(getStatus(b).status),
+    )
+    .slice(startIndex, endIndex);
   const shouldShowPagination = pods.length > PODS_PER_PAGE;
 
   const internalHandlePodClick = (pod: PodObject) => {
@@ -92,35 +98,27 @@ export default function PodsGrid({ title, href, pods }: PodsGridProps) {
         <div className="space-y-4">
           <div className="flex flex-wrap gap-0.5">
             <TooltipProvider>
-              {currentPods
-                .sort(
-                  (a, b) =>
-                    STATUS_ORDER.indexOf(getStatus(a).status) -
-                    STATUS_ORDER.indexOf(getStatus(b).status),
-                )
-                .map((pod) => (
-                  <Tooltip
-                    key={`${pod.metadata.namespace}/${pod.metadata.name}`}
-                  >
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-all  ${getPodColor(pod)}`}
-                        onClick={() => internalHandlePodClick(pod)}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">{pod.metadata.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Namespace: {pod.metadata.namespace}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Status: {getStatus(pod).status}
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
+              {currentPods.map((pod) => (
+                <Tooltip key={`${pod.metadata.namespace}/${pod.metadata.name}`}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={`w-3 h-3 cursor-pointer border border-gray-300 hover:border-gray-600 transition-all  ${getPodColor(pod)}`}
+                      onClick={() => internalHandlePodClick(pod)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-medium">{pod.metadata.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Namespace: {pod.metadata.namespace}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Status: {getStatus(pod).status}
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
             </TooltipProvider>
           </div>
           {pods.length === 0 && (
