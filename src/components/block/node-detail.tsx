@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { getStatusColor, getStatus } from "@/lib/status";
 import NodeResourceUsage from "./node-resource-usage";
 import PodsGrid from "./pods-grid";
+import NodePodList from "./node-pod-list";
 import { useKuview } from "@/hooks/useKuview";
 
 interface NodeDetailProps {
@@ -51,6 +52,9 @@ export default function NodeDetail({ node, className }: NodeDetailProps) {
 
       {/* Resource Usage */}
       <NodeResourceUsage node={node} />
+
+      {/* Pod List */}
+      <NodePodList pods={nodePods} />
 
       {/* Status Section */}
       <NodeStatusComponent status={node.status} />
