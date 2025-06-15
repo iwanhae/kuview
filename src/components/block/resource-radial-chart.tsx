@@ -32,7 +32,7 @@ export function ResourceRadialChart({
   chartConfig,
   formatValue,
 }: ResourceRadialChartProps) {
-  const sortedData = [...data].sort((a, b) => b.percentage - a.percentage);
+  const sortedData = [...data];
 
   return (
     <Card className="flex flex-col h-full">
@@ -61,7 +61,7 @@ export function ResourceRadialChart({
                 <ChartTooltipContent
                   hideLabel
                   nameKey="type"
-                  formatter={(value, name, props) => {
+                  formatter={(_value, _name, props) => {
                     const { value: originalValue, type } = props.payload;
                     return [
                       `${formatValue(originalValue)} (${(

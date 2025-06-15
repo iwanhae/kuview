@@ -10,8 +10,10 @@ import MetadataComponent from "./metadata";
 import NodeSpecComponent from "./node-spec";
 import NodeStatusComponent from "./node-status";
 import { cn } from "@/lib/utils";
-import NodeOverview from "./node-overview";
 import { getStatusColor, getStatus } from "@/lib/status";
+import NodeResourceUsage from "./node-resource-usage";
+import PodsGrid from "./pods-grid";
+import { useKuview } from "@/hooks/useKuview";
 
 interface NodeDetailProps {
   node: NodeObject;
@@ -20,6 +22,12 @@ interface NodeDetailProps {
 
 export default function NodeDetail({ node, className }: NodeDetailProps) {
   const [jsonExpanded, setJsonExpanded] = useState(false);
+  const podsData = useKuview("v1/Pod");
+
+  // Filter pods that belong to the selected node
+  const nodePods = Object.values(podsData).filter(
+    (pod) => pod.spec.nodeName === node.metadata.name,
+  );
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -38,7 +46,11 @@ export default function NodeDetail({ node, className }: NodeDetailProps) {
         );
       })()}
 
-      <NodeOverview node={node} />
+      {/* Pods */}
+      <PodsGrid pods={nodePods} />
+
+      {/* Resource Usage */}
+      <NodeResourceUsage node={node} />
 
       {/* Status Section */}
       <NodeStatusComponent status={node.status} />
