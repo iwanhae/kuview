@@ -229,12 +229,10 @@ function ResourceDisplayCell({
       {usage !== undefined && usage > 0 && (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-red-700">Usage</span>
+            <span className="text-xs font-medium text-red-700">Real</span>
             <span className="text-xs text-red-600 font-mono">
               {formatValue(usage)}
             </span>
-          </div>
-          <div className="flex items-center gap-2">
             <CustomProgressBar
               percentage={usagePercentage}
               colorClass={getUsageColor(usagePercentage)}
@@ -250,12 +248,10 @@ function ResourceDisplayCell({
       {requests > 0 && (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-blue-700">Requests</span>
+            <span className="text-xs font-medium text-blue-700">Req</span>
             <span className="text-xs text-blue-600 font-mono">
               {formatValue(requests)}
             </span>
-          </div>
-          <div className="flex items-center gap-2">
             <CustomProgressBar
               percentage={requestsPercentage}
               colorClass={getRequestsColor(requestsPercentage)}
@@ -271,12 +267,10 @@ function ResourceDisplayCell({
       {limits > 0 && (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-purple-700">Limits</span>
+            <span className="text-xs font-medium text-purple-700">Limit</span>
             <span className="text-xs text-purple-600 font-mono">
               {formatValue(limits)}
             </span>
-          </div>
-          <div className="flex items-center gap-2">
             <CustomProgressBar
               percentage={limitsPercentage}
               colorClass={getLimitsColor(limitsPercentage)}
