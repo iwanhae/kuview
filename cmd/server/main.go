@@ -39,7 +39,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to create a new server: %w", err)
 	}
 
-	go http.ListenAndServe(":8080", s)
+	go http.ListenAndServe(":8001", s)
 
 	mgr, err := controller.New(
 		*cfg,

@@ -19,5 +19,5 @@ WORKDIR /app
 COPY --from=build /go/bin/kuview /app/kuview
 COPY --from=build-web /app/dist /app/dist
 
-EXPOSE 8080
+EXPOSE 8001
 CMD ["/app/kuview"]

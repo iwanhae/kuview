@@ -9,9 +9,9 @@ export default defineConfig({
   publicDir: "static",
   server: {
     proxy: {
-      "/kuview": "http://localhost:8080",
-      "/api": "http://localhost:8001",
-      "/apis": "http://localhost:8001",
+      "/kuview": "http://127.0.0.1:8001",
+      "/api": "http://127.0.0.1:8001",
+      "/apis": "http://127.0.0.1:8001",
     },
   },
   plugins: [react(), tailwindcss()],
