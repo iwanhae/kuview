@@ -3,6 +3,7 @@ interface ResourceBarProps {
   requests: number;
   limits: number;
   capacity: number;
+  usage?: number;
   formatValue: (value: number) => string;
 }
 
@@ -11,10 +12,13 @@ export default function ResourceBar({
   requests,
   limits,
   capacity,
+  usage,
   formatValue,
 }: ResourceBarProps) {
   const requestsPercentage = capacity > 0 ? (requests / capacity) * 100 : 0;
   const limitsPercentage = capacity > 0 ? (limits / capacity) * 100 : 0;
+  const usagePercentage =
+    usage !== undefined && capacity > 0 ? (usage / capacity) * 100 : 0;
 
   return (
     <div className="space-y-2">
@@ -24,6 +28,32 @@ export default function ResourceBar({
           {formatValue(capacity)} total
         </span>
       </div>
+
+      {/* Actual Usage Bar (if available) */}
+      {usage !== undefined && (
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-xs text-muted-foreground">
+              Usage (actual)
+            </span>
+            <span className="text-xs font-medium">
+              {formatValue(usage)} ({usagePercentage.toFixed(1)}%)
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all ${
+                usagePercentage > 90
+                  ? "bg-red-500"
+                  : usagePercentage > 70
+                    ? "bg-yellow-500"
+                    : "bg-purple-500"
+              }`}
+              style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Requests Bar */}
       <div>

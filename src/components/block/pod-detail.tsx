@@ -15,6 +15,7 @@ import { useKuview } from "@/hooks/useKuview";
 import { getStatus } from "@/lib/status";
 import { getStatusColor } from "@/lib/status";
 import PodLogs from "./pod-logs";
+import PodResourceUsage from "./pod-resource-usage";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -47,6 +48,9 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
           </div>
         );
       })()}
+
+      {/* Resource Usage */}
+      <PodResourceUsage pod={pod} />
 
       {/* Pods in the same node */}
       <PodsGrid

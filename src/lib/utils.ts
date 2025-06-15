@@ -7,13 +7,17 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Parse Kubernetes CPU value to millicores
- * Examples: "100m" -> 100, "0.1" -> 100, "1" -> 1000
+ * Examples: "100m" -> 100, "0.1" -> 100, "1" -> 1000, "1000n" -> 1
  */
 export function parseCpu(value: string): number {
   if (!value) return 0;
 
   if (value.endsWith("m")) {
     return parseInt(value.slice(0, -1), 10);
+  }
+
+  if (value.endsWith("n")) {
+    return Math.ceil(parseInt(value.slice(0, -1), 10) / 1000_000);
   }
 
   return Math.round(parseFloat(value) * 1000);
