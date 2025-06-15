@@ -1,14 +1,19 @@
 import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject, PodMetricsObject } from "@/lib/kuview";
-import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
+import {
+  parseCpu,
+  parseMemory,
+  formatCpu,
+  formatBytes,
+  generateChartData,
+} from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { ChartConfig } from "@/components/ui/chart";
 import { ResourceRadialChart } from "./resource-radial-chart";
-import type { ResourceData } from "./pod-resource-usage";
 import { useState, useMemo, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import dayjs from "dayjs";
+import { cpuChartConfig, memoryChartConfig } from "@/config/charts";
 
 interface ClusterResourceUsage {
   cpu: {
@@ -97,42 +102,6 @@ function calculateClusterResourceUsage(
   };
 }
 
-const cpuChartConfig = {
-  percentage: {
-    label: "Percentage",
-  },
-  requests: {
-    label: "Requests",
-    color: "#93c5fd",
-  },
-  limits: {
-    label: "Limits",
-    color: "#60a5fa",
-  },
-  actual: {
-    label: "Usage",
-    color: "#3b82f6",
-  },
-} satisfies ChartConfig;
-
-const memoryChartConfig = {
-  percentage: {
-    label: "Percentage",
-  },
-  requests: {
-    label: "Requests",
-    color: "#a7f3d0",
-  },
-  limits: {
-    label: "Limits",
-    color: "#6ee7b7",
-  },
-  actual: {
-    label: "Usage",
-    color: "#34d399",
-  },
-} satisfies ChartConfig;
-
 export default function ClusterResourceOverview() {
   const rawNodes = useKuview("v1/Node");
   const rawPods = useKuview("v1/Pod");
@@ -183,97 +152,25 @@ export default function ClusterResourceOverview() {
     return result;
   }, [dataForCalculation]);
 
-  // Prepare CPU chart data
-  const cpuData: ResourceData[] = [];
+  const cpuData = generateChartData(
+    clusterUsage.cpu.totalCapacity,
+    {
+      requests: clusterUsage.cpu.totalRequests,
+      limits: clusterUsage.cpu.totalLimits,
+      usage: clusterUsage.cpu.totalUsage,
+    },
+    cpuChartConfig,
+  );
 
-  if (clusterUsage.cpu.totalRequests > 0) {
-    cpuData.push({
-      type: "requests",
-      value: clusterUsage.cpu.totalRequests,
-      percentage:
-        clusterUsage.cpu.totalCapacity > 0
-          ? (clusterUsage.cpu.totalRequests / clusterUsage.cpu.totalCapacity) *
-            100
-          : 0,
-      fill: cpuChartConfig.requests.color,
-    });
-  }
-
-  if (clusterUsage.cpu.totalLimits > 0) {
-    cpuData.push({
-      type: "limits",
-      value: clusterUsage.cpu.totalLimits,
-      percentage:
-        clusterUsage.cpu.totalCapacity > 0
-          ? (clusterUsage.cpu.totalLimits / clusterUsage.cpu.totalCapacity) *
-            100
-          : 0,
-      fill: cpuChartConfig.limits.color,
-    });
-  }
-
-  if (
-    clusterUsage.cpu.totalUsage !== undefined &&
-    clusterUsage.cpu.totalUsage > 0
-  ) {
-    cpuData.push({
-      type: "actual",
-      value: clusterUsage.cpu.totalUsage,
-      percentage:
-        clusterUsage.cpu.totalCapacity > 0
-          ? (clusterUsage.cpu.totalUsage / clusterUsage.cpu.totalCapacity) * 100
-          : 0,
-      fill: cpuChartConfig.actual.color,
-    });
-  }
-
-  // Prepare Memory chart data
-  const memoryData: ResourceData[] = [];
-
-  if (clusterUsage.memory.totalRequests > 0) {
-    memoryData.push({
-      type: "requests",
-      value: clusterUsage.memory.totalRequests,
-      percentage:
-        clusterUsage.memory.totalCapacity > 0
-          ? (clusterUsage.memory.totalRequests /
-              clusterUsage.memory.totalCapacity) *
-            100
-          : 0,
-      fill: memoryChartConfig.requests.color,
-    });
-  }
-
-  if (clusterUsage.memory.totalLimits > 0) {
-    memoryData.push({
-      type: "limits",
-      value: clusterUsage.memory.totalLimits,
-      percentage:
-        clusterUsage.memory.totalCapacity > 0
-          ? (clusterUsage.memory.totalLimits /
-              clusterUsage.memory.totalCapacity) *
-            100
-          : 0,
-      fill: memoryChartConfig.limits.color,
-    });
-  }
-
-  if (
-    clusterUsage.memory.totalUsage !== undefined &&
-    clusterUsage.memory.totalUsage > 0
-  ) {
-    memoryData.push({
-      type: "actual",
-      value: clusterUsage.memory.totalUsage,
-      percentage:
-        clusterUsage.memory.totalCapacity > 0
-          ? (clusterUsage.memory.totalUsage /
-              clusterUsage.memory.totalCapacity) *
-            100
-          : 0,
-      fill: memoryChartConfig.actual.color,
-    });
-  }
+  const memoryData = generateChartData(
+    clusterUsage.memory.totalCapacity,
+    {
+      requests: clusterUsage.memory.totalRequests,
+      limits: clusterUsage.memory.totalLimits,
+      usage: clusterUsage.memory.totalUsage,
+    },
+    memoryChartConfig,
+  );
 
   if (cpuData.length === 0 && memoryData.length === 0) {
     return (

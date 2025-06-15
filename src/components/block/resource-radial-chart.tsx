@@ -14,8 +14,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { ChartConfig } from "@/components/ui/chart";
-import type { ResourceData } from "./pod-resource-usage";
 import { RadialBar, RadialBarChart, PolarAngleAxis } from "recharts";
+import type { ResourceData } from "@/lib/types";
 
 interface ResourceRadialChartProps {
   title: string;
@@ -32,8 +32,6 @@ export function ResourceRadialChart({
   chartConfig,
   formatValue,
 }: ResourceRadialChartProps) {
-  const sortedData = [...data];
-
   return (
     <Card className="flex flex-col h-full">
       <CardHeader className="items-center pb-0">
@@ -46,7 +44,7 @@ export function ResourceRadialChart({
           className="mx-auto aspect-square max-h-[200px]"
         >
           <RadialBarChart
-            data={sortedData}
+            data={data}
             innerRadius={30}
             outerRadius={110}
             startAngle={90}
@@ -79,7 +77,7 @@ export function ResourceRadialChart({
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm mt-auto">
         <div className="w-full mt-2 space-y-1">
-          {sortedData.map((item) => (
+          {data.map((item) => (
             <div
               key={item.type}
               className="flex items-center justify-between text-xs"

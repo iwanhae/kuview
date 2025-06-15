@@ -2,11 +2,16 @@
 
 import { useKuview } from "@/hooks/useKuview";
 import type { NodeObject, PodObject, NodeMetricsObject } from "@/lib/kuview";
-import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
+import {
+  parseCpu,
+  parseMemory,
+  formatCpu,
+  formatBytes,
+  generateChartData,
+} from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResourceRadialChart } from "./resource-radial-chart";
-import type { ChartConfig } from "@/components/ui/chart";
-import type { ResourceData } from "./pod-resource-usage";
+import { cpuChartConfig, memoryChartConfig } from "@/config/charts";
 
 interface NodeResourceUsageProps {
   node: NodeObject;
@@ -41,21 +46,23 @@ function calculateResourceUsage(
   let memoryRequests = 0;
   let memoryLimits = 0;
 
-  nodePods.forEach((pod) => {
-    pod.spec.containers.forEach((container) => {
-      const resources = container.resources || {};
+  nodePods
+    .filter((pod) => pod.kuviewExtra?.status === "Running")
+    .forEach((pod) => {
+      pod.spec.containers.forEach((container) => {
+        const resources = container.resources || {};
 
-      if (resources.requests) {
-        cpuRequests += parseCpu(resources.requests.cpu || "0");
-        memoryRequests += parseMemory(resources.requests.memory || "0");
-      }
+        if (resources.requests) {
+          cpuRequests += parseCpu(resources.requests.cpu || "0");
+          memoryRequests += parseMemory(resources.requests.memory || "0");
+        }
 
-      if (resources.limits) {
-        cpuLimits += parseCpu(resources.limits.cpu || "0");
-        memoryLimits += parseMemory(resources.limits.memory || "0");
-      }
+        if (resources.limits) {
+          cpuLimits += parseCpu(resources.limits.cpu || "0");
+          memoryLimits += parseMemory(resources.limits.memory || "0");
+        }
+      });
     });
-  });
 
   let cpuUsage: number | undefined;
   let memoryUsage: number | undefined;
@@ -81,42 +88,6 @@ function calculateResourceUsage(
   };
 }
 
-const cpuChartConfig = {
-  percentage: {
-    label: "Percentage",
-  },
-  requests: {
-    label: "Requests",
-    color: "#93c5fd",
-  },
-  limits: {
-    label: "Limits",
-    color: "#60a5fa",
-  },
-  usage: {
-    label: "Usage",
-    color: "#3b82f6",
-  },
-} satisfies ChartConfig;
-
-const memoryChartConfig = {
-  percentage: {
-    label: "Percentage",
-  },
-  requests: {
-    label: "Requests",
-    color: "#a7f3d0",
-  },
-  limits: {
-    label: "Limits",
-    color: "#6ee7b7",
-  },
-  usage: {
-    label: "Usage",
-    color: "#34d399",
-  },
-} satisfies ChartConfig;
-
 export default function NodeResourceUsage({ node }: NodeResourceUsageProps) {
   const podsData = useKuview("v1/Pod");
   const nodeMetricsData = useKuview("metrics.k8s.io/v1beta1/NodeMetrics");
@@ -131,57 +102,17 @@ export default function NodeResourceUsage({ node }: NodeResourceUsageProps) {
 
   const resourceUsage = calculateResourceUsage(node, nodePods, nodeMetrics);
 
-  const cpuData: ResourceData[] = [
-    {
-      type: "requests",
-      value: resourceUsage.cpu.requests,
-      percentage:
-        (resourceUsage.cpu.requests / resourceUsage.cpu.capacity) * 100,
-      fill: cpuChartConfig.requests.color,
-    },
-    {
-      type: "limits",
-      value: resourceUsage.cpu.limits,
-      percentage: (resourceUsage.cpu.limits / resourceUsage.cpu.capacity) * 100,
-      fill: cpuChartConfig.limits.color,
-    },
-  ];
+  const cpuData = generateChartData(
+    resourceUsage.cpu.capacity,
+    resourceUsage.cpu,
+    cpuChartConfig,
+  );
 
-  if (resourceUsage.cpu.usage !== undefined) {
-    cpuData.push({
-      type: "usage",
-      value: resourceUsage.cpu.usage,
-      percentage: (resourceUsage.cpu.usage / resourceUsage.cpu.capacity) * 100,
-      fill: cpuChartConfig.usage.color,
-    });
-  }
-
-  const memoryData: ResourceData[] = [
-    {
-      type: "requests",
-      value: resourceUsage.memory.requests,
-      percentage:
-        (resourceUsage.memory.requests / resourceUsage.memory.capacity) * 100,
-      fill: memoryChartConfig.requests.color,
-    },
-    {
-      type: "limits",
-      value: resourceUsage.memory.limits,
-      percentage:
-        (resourceUsage.memory.limits / resourceUsage.memory.capacity) * 100,
-      fill: memoryChartConfig.limits.color,
-    },
-  ];
-
-  if (resourceUsage.memory.usage !== undefined) {
-    memoryData.push({
-      type: "usage",
-      value: resourceUsage.memory.usage,
-      percentage:
-        (resourceUsage.memory.usage / resourceUsage.memory.capacity) * 100,
-      fill: memoryChartConfig.usage.color,
-    });
-  }
+  const memoryData = generateChartData(
+    resourceUsage.memory.capacity,
+    resourceUsage.memory,
+    memoryChartConfig,
+  );
   return (
     <Card>
       <CardHeader>
