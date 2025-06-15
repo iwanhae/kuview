@@ -1,15 +1,8 @@
 # KuView: A browser-based, real-time Kubernetes dashboard
 
+[![KuView Demo](./sample.png)](https://youtu.be/4mpiOiLgfLE)
+
 KuView is a real-time, read-only Kubernetes dashboard that runs entirely in your web browser. It provides an immediate and comprehensive overview of your cluster's status and resource utilization, with no server-side installation or `kubectl` plugins required for its primary mode of operation.
-
-## Core Features
-
-- **Real-time Monitoring**: Observe live updates of resource states and events within your cluster.
-- **Comprehensive Resource Visualization**: Visualize relationships between resources to gain a deeper understanding of your cluster's architecture.
-- **Client-Side Operation**: Run anywhere with `kubectl` access. No cluster-side installation is required for the proxy-based approach.
-- **Secure Read-only Access**: Ensures cluster safety with strictly read-only access, preventing any modifications to your cluster state.
-- **Responsive User Interface**: Fully responsive UI for a seamless experience on desktops, tablets, and mobile devices.
-- **Modern UI/UX**: Features a clean and intuitive interface built with React for an optimal user experience.
 
 ## Quick Start Guide
 
@@ -30,13 +23,6 @@ kubectl proxy -w ./dist
 Navigate to **http://127.0.0.1:8001/static** in your web browser.
 
 **That's it!**
-
-**Pros:**
-- No components to install on your cluster.
-- `kubectl` is the only dependency. Works in air-gapped environments.
-
-**Cons:**
-- Slower performance, as all API requests are proxied through your local machine and processed in-browser using WebAssembly (WASM).
 
 ### 2. Deploy on your cluster
 
@@ -71,13 +57,14 @@ kubectl expose -n kuview deployment kuview --port 8001 --type=NodePort
 # Now you can access KuView at http://<node-ip>:<node-port>/
 ```
 
-**Pros:**
-- Faster performance with server-side operations handled within the cluster.
-- Reduced load on the Kubernetes API server thanks to server-side caching.
-- Easily shareable dashboard access with your team.
+## Core Features
 
-**Cons:**
-- Requires deploying a component into your cluster.
+- **Real-time Monitoring**: Observe live updates of resource states and events within your cluster.
+- **Comprehensive Resource Visualization**: Visualize relationships between resources to gain a deeper understanding of your cluster's architecture.
+- **Client-Side Operation**: Run anywhere with `kubectl` access. No cluster-side installation is required for the proxy-based approach.
+- **Secure Read-only Access**: Ensures cluster safety with strictly read-only access, preventing any modifications to your cluster state.
+- **Responsive User Interface**: Fully responsive UI for a seamless experience on desktops, tablets, and mobile devices.
+- **Modern UI/UX**: Features a clean and intuitive interface built with React for an optimal user experience.
 
 ## For Development
 
