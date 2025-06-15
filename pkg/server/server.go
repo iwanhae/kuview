@@ -2,6 +2,7 @@ package server
 
 import (
 	"compress/gzip"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -10,21 +11,32 @@ import (
 	"github.com/iwanhae/kuview/pkg/server/middleware"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Server struct {
 	*echo.Echo
+
+	// for caching the objects
 	cache map[string]client.Object
 	ch    chan *controller.Event
 	rwmu  *sync.RWMutex
 	evt   eventDistributor
+
+	// for proxy-ing the request to kubernetes api server
+	cfg *rest.Config
+	cl  *http.Client
 }
 
 var _ http.Handler = (*Server)(nil)
 var _ controller.Emitter = (*Server)(nil)
 
-func New() *Server {
+func New(cfg *rest.Config) (*Server, error) {
+	cl, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a rest client: %w", err)
+	}
 	ch := make(chan *controller.Event)
 	dist := distributor.New(ch, 1024)
 	s := &Server{
@@ -33,6 +45,8 @@ func New() *Server {
 		ch:    ch,
 		rwmu:  &sync.RWMutex{},
 		evt:   dist,
+		cfg:   cfg,
+		cl:    cl,
 	}
 
 	// Register middleware
@@ -66,5 +80,8 @@ func New() *Server {
 		return c.String(http.StatusOK, "yes")
 	})
 
-	return s
+	// /api/v1/namespaces/default/pods/minio-0/log
+	s.GET("/api/v1/namespaces/:namespace/pods/:pod/log", s.proxy)
+
+	return s, nil
 }

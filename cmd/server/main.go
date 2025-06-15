@@ -34,7 +34,11 @@ func main() {
 func run(ctx context.Context) error {
 	cfg := ctrl.GetConfigOrDie()
 
-	s := server.New()
+	s, err := server.New(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create a new server: %w", err)
+	}
+
 	go http.ListenAndServe(":8080", s)
 
 	mgr, err := controller.New(
