@@ -53,21 +53,23 @@ function calculateClusterResourceUsage(
   });
 
   // Calculate total requests and limits from all pods
-  podList.forEach((pod) => {
-    pod.spec.containers.forEach((container) => {
-      const resources = container.resources || {};
+  podList
+    .filter((pod) => pod.kuviewExtra?.status === "Running")
+    .forEach((pod) => {
+      pod.spec.containers.forEach((container) => {
+        const resources = container.resources || {};
 
-      if (resources.requests) {
-        totalCpuRequests += parseCpu(resources.requests.cpu || "0");
-        totalMemoryRequests += parseMemory(resources.requests.memory || "0");
-      }
+        if (resources.requests) {
+          totalCpuRequests += parseCpu(resources.requests.cpu || "0");
+          totalMemoryRequests += parseMemory(resources.requests.memory || "0");
+        }
 
-      if (resources.limits) {
-        totalCpuLimits += parseCpu(resources.limits.cpu || "0");
-        totalMemoryLimits += parseMemory(resources.limits.memory || "0");
-      }
+        if (resources.limits) {
+          totalCpuLimits += parseCpu(resources.limits.cpu || "0");
+          totalMemoryLimits += parseMemory(resources.limits.memory || "0");
+        }
+      });
     });
-  });
 
   // Calculate total usage from all pod metrics
   podMetricsList.forEach((podMetric) => {

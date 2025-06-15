@@ -1,5 +1,5 @@
 import { useKuview } from "@/hooks/useKuview";
-import type { NodeObject, PodObject, PodMetricsObject } from "@/lib/kuview";
+import type { NodeObject, PodObject, NodeMetricsObject } from "@/lib/kuview";
 import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
 import { getStatus, Status } from "@/lib/status";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -53,7 +53,7 @@ interface NodeResourceData {
 function calculateNodeResourceData(
   nodes: Record<string, NodeObject>,
   pods: Record<string, PodObject>,
-  podMetrics: Record<string, PodMetricsObject>,
+  nodeMetrics: Record<string, NodeMetricsObject>,
 ): NodeResourceData[] {
   const nodeResourceMap: Record<string, NodeResourceData> = {};
 
@@ -89,43 +89,39 @@ function calculateNodeResourceData(
   });
 
   // Iterate over pods to aggregate resource requests and limits
-  Object.values(pods).forEach((pod) => {
-    const nodeName = pod.spec.nodeName;
+  Object.values(pods)
+    .filter((pod) => pod.kuviewExtra?.status === "Running")
+    .forEach((pod) => {
+      const nodeName = pod.spec.nodeName;
+      if (nodeName && nodeResourceMap[nodeName]) {
+        const nodeData = nodeResourceMap[nodeName];
+        nodeData.podCount += 1;
+
+        pod.spec.containers.forEach((container) => {
+          const resources = container.resources || {};
+          if (resources.requests) {
+            nodeData.cpu.requests += parseCpu(resources.requests.cpu || "0");
+            nodeData.memory.requests += parseMemory(
+              resources.requests.memory || "0",
+            );
+          }
+          if (resources.limits) {
+            nodeData.cpu.limits += parseCpu(resources.limits.cpu || "0");
+            nodeData.memory.limits += parseMemory(
+              resources.limits.memory || "0",
+            );
+          }
+        });
+      }
+    });
+
+  // Iterate over node metrics to aggregate actual usage (O(N) time)
+  Object.values(nodeMetrics).forEach((nodeMetric) => {
+    const nodeName = nodeMetric.metadata.name;
     if (nodeName && nodeResourceMap[nodeName]) {
       const nodeData = nodeResourceMap[nodeName];
-      nodeData.podCount += 1;
-
-      pod.spec.containers.forEach((container) => {
-        const resources = container.resources || {};
-        if (resources.requests) {
-          nodeData.cpu.requests += parseCpu(resources.requests.cpu || "0");
-          nodeData.memory.requests += parseMemory(
-            resources.requests.memory || "0",
-          );
-        }
-        if (resources.limits) {
-          nodeData.cpu.limits += parseCpu(resources.limits.cpu || "0");
-          nodeData.memory.limits += parseMemory(resources.limits.memory || "0");
-        }
-      });
-    }
-  });
-
-  // Iterate over pod metrics to aggregate actual usage (O(M) time)
-  Object.values(podMetrics).forEach((podMetric) => {
-    // Find the pod to get its node name using the map (O(1) lookup)
-    const pod =
-      pods[`${podMetric.metadata.namespace}/${podMetric.metadata.name}`];
-
-    if (pod && pod.spec.nodeName && nodeResourceMap[pod.spec.nodeName]) {
-      const nodeData = nodeResourceMap[pod.spec.nodeName];
-
-      podMetric.containers.forEach((containerMetrics) => {
-        nodeData.cpu.usage! += parseCpu(containerMetrics.usage.cpu || "0");
-        nodeData.memory.usage! += parseMemory(
-          containerMetrics.usage.memory || "0",
-        );
-      });
+      nodeData.cpu.usage = parseCpu(nodeMetric.usage.cpu || "0");
+      nodeData.memory.usage = parseMemory(nodeMetric.usage.memory || "0");
     }
   });
 
@@ -144,7 +140,7 @@ function calculateNodeResourceData(
       memory.capacity > 0 ? (memory.limits / memory.capacity) * 100 : 0;
 
     // Set usage to undefined if no metrics available, otherwise calculate percentage
-    if (cpu.usage === 0 && Object.keys(podMetrics).length === 0) {
+    if (cpu.usage === 0) {
       cpu.usage = undefined;
       cpu.usagePercentage = undefined;
     } else {
@@ -152,7 +148,7 @@ function calculateNodeResourceData(
         cpu.capacity > 0 ? (cpu.usage! / cpu.capacity) * 100 : 0;
     }
 
-    if (memory.usage === 0 && Object.keys(podMetrics).length === 0) {
+    if (memory.usage === 0) {
       memory.usage = undefined;
       memory.usagePercentage = undefined;
     } else {
@@ -346,7 +342,8 @@ function SortableHeader({
 export default function NodesResourceTable() {
   const rawNodes = useKuview("v1/Node");
   const rawPods = useKuview("v1/Pod");
-  const rawPodMetrics = useKuview("metrics.k8s.io/v1beta1/PodMetrics");
+  const rawNodeMetrics = useKuview("metrics.k8s.io/v1beta1/NodeMetrics");
+
   // Passive mode is used to prevent the table from recalculating when the data is too big to calculate every time.
   const [passiveMode, setPassiveMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -360,7 +357,7 @@ export default function NodesResourceTable() {
   const [dataForCalculation, setDataForCalculation] = useState({
     nodes: rawNodes,
     pods: rawPods,
-    podMetrics: rawPodMetrics,
+    nodeMetrics: rawNodeMetrics,
   });
 
   useEffect(() => {
@@ -368,15 +365,15 @@ export default function NodesResourceTable() {
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
-      podMetrics: rawPodMetrics,
+      nodeMetrics: rawNodeMetrics,
     });
-  }, [rawNodes, rawPods, rawPodMetrics, passiveMode]);
+  }, [rawNodes, rawPods, rawNodeMetrics, passiveMode]);
 
   const handleRefresh = () => {
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
-      podMetrics: rawPodMetrics,
+      nodeMetrics: rawNodeMetrics,
     });
   };
 
@@ -393,10 +390,10 @@ export default function NodesResourceTable() {
     const result = calculateNodeResourceData(
       dataForCalculation.nodes,
       dataForCalculation.pods,
-      dataForCalculation.podMetrics,
+      dataForCalculation.nodeMetrics,
     );
     const diff = Math.abs(since.diff());
-    console.log(diff);
+
     // if diff is bigger than 16ms, it means it takes more than 1 frame to calculate.
     if (diff > 16) {
       setPassiveMode(true);
@@ -406,12 +403,7 @@ export default function NodesResourceTable() {
       );
     }
     return result;
-  }, [
-    dataForCalculation.nodes,
-    dataForCalculation.pods,
-    dataForCalculation.podMetrics,
-    setPassiveMode,
-  ]);
+  }, [dataForCalculation, setPassiveMode]);
 
   // Sort and filter data
   const sortedAndFilteredData = useMemo(() => {

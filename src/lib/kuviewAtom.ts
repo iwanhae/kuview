@@ -77,7 +77,11 @@ export function useGVKSyncHook(gvk: string) {
 
     for (const operation of operations) {
       const index = PENDING_CHANGES.findIndex(
-        (o) => o.object.metadata.uid === operation.object.metadata.uid,
+        (o) =>
+          // it is suprising that sometimes the uid is not unique, so we need to check the apiVersion and kind as well
+          `${o.object.apiVersion}/${o.object.kind}` ===
+            `${operation.object.apiVersion}/${operation.object.kind}` &&
+          o.object.metadata.uid === operation.object.metadata.uid,
       );
       if (index !== -1) {
         PENDING_CHANGES.splice(index, 1);
