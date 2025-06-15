@@ -124,11 +124,8 @@ export default function PodResourceUsage({ pod }: PodResourceUsageProps) {
   const nodesData = useKuview("v1/Node");
 
   // Find metrics for the current pod
-  const podMetrics = Object.values(podMetricsData).find(
-    (metrics) =>
-      metrics.metadata.name === pod.metadata.name &&
-      metrics.metadata.namespace === pod.metadata.namespace,
-  );
+  const podMetrics =
+    podMetricsData[`${pod.metadata.namespace}/${pod.metadata.name}`];
 
   // Find the node this pod is running on
   const node = Object.values(nodesData).find(
