@@ -8,13 +8,17 @@ import (
 	"github.com/go-logr/logr"
 	kulog "github.com/iwanhae/kuview/pkg/logger"
 	zlog "github.com/rs/zerolog/log"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	clog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -50,12 +54,49 @@ func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emi
 		if err != nil {
 			return nil, fmt.Errorf("failed to create controller: %w", err)
 		}
-		err = c.Watch(
+
+		var p predicate.TypedPredicate[client.Object] = predicate.NewPredicateFuncs(
+			func(object client.Object) bool {
+				return true
+			},
+		)
+		// in case of Node, filter out heartbeat events
+		if obj.GetObjectKind().GroupVersionKind().String() == "v1/Node" {
+			p = predicate.TypedFuncs[client.Object]{
+				CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
+					return true
+				},
+				UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+					new := e.ObjectNew.(*v1.Node)
+					old := e.ObjectOld.(*v1.Node)
+
+					// clear last heartbeat time to prevent unnecessary updates
+					for i := range new.Status.Conditions {
+						new.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
+					}
+					for i := range old.Status.Conditions {
+						old.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
+					}
+
+					result := !reflect.DeepEqual(new, old)
+					fmt.Println("result", result)
+					return result
+				},
+				DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
+					return true
+				},
+				GenericFunc: func(e event.TypedGenericEvent[client.Object]) bool {
+					return true
+				},
+			}
+		}
+
+		if err := c.Watch(
 			source.Kind(mgr.GetCache(), obj,
 				&handler.TypedEnqueueRequestForObject[client.Object]{},
+				p,
 			),
-		)
-		if err != nil {
+		); err != nil {
 			return nil, fmt.Errorf("failed to watch object: %w", err)
 		}
 	}
