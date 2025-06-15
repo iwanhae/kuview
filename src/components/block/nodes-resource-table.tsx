@@ -355,6 +355,8 @@ export default function NodesResourceTable() {
   const rawNodes = useKuview("v1/Node");
   const rawPods = useKuview("v1/Pod");
   const rawPodMetrics = useKuview("metrics.k8s.io/v1beta1/PodMetrics");
+  // Passive mode is used to prevent the table from recalculating when the data is too big to calculate every time.
+  const [passiveMode, setPassiveMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortState, setSortState] = useState<SortState>({
     field: "pods",
@@ -369,17 +371,24 @@ export default function NodesResourceTable() {
     podMetrics: rawPodMetrics,
   });
 
-  // Update dataForCalculation when raw data changes for the initial load.
-  // This useEffect will run once on mount and whenever raw data references change.
-  // Subsequent updates will only happen via the refresh button.
   useEffect(() => {
+    if (passiveMode) return;
+    const now = Date.now();
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
       podMetrics: rawPodMetrics,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const diff = Date.now() - now;
+    // if diff is bigger than 33ms, it means it takes more than 1 frame to calculate.
+    if (diff > 33) {
+      setPassiveMode(true);
+      console.log(
+        "[REACT] Passive mode activated due to slow calculation",
+        diff,
+      );
+    }
+  }, [rawNodes, rawPods, rawPodMetrics, passiveMode]);
 
   const handleRefresh = () => {
     setDataForCalculation({
@@ -399,10 +408,6 @@ export default function NodesResourceTable() {
 
   const nodeResourceData = useMemo(
     () => {
-      console.log(
-        "[REACT] Recalculating nodeResourceData due to dataForCalculation update",
-        new Date().toLocaleTimeString(),
-      );
       return calculateNodeResourceData(
         dataForCalculation.nodes,
         dataForCalculation.pods,
@@ -480,14 +485,16 @@ export default function NodesResourceTable() {
         <div className="flex justify-between items-center gap-2">
           <Input
             type="search"
-            placeholder="Nodes Resource Usage"
+            placeholder="Search nodes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full"
           />
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+          {passiveMode && (
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
