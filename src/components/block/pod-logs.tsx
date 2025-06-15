@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/drawer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import Convert from "ansi-to-html";
 
 interface PodLogsProps {
   pod: PodObject;
@@ -23,6 +24,9 @@ function LogContent({ url, follow }: { url: string; follow: boolean }) {
   const preRef = useRef<HTMLPreElement>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+  const convertRef = useRef(
+    new Convert({ stream: true, newline: false, escapeXML: false }),
+  );
 
   useEffect(() => {
     if (!url) return;
@@ -34,7 +38,7 @@ function LogContent({ url, follow }: { url: string; follow: boolean }) {
       setLoading(true);
       setError(null);
       if (preRef.current) {
-        preRef.current.textContent = "";
+        preRef.current.innerHTML = "";
       }
 
       try {
@@ -58,15 +62,15 @@ function LogContent({ url, follow }: { url: string; follow: boolean }) {
           const { done, value } = await reader.read();
           if (done) {
             if (!contentReceived && preRef.current) {
-              preRef.current.textContent = "No logs available.";
+              preRef.current.innerHTML = "No logs available.";
             }
             break;
           }
           contentReceived = true;
           if (preRef.current) {
-            preRef.current.textContent += decoder.decode(value, {
-              stream: true,
-            });
+            const decodedText = decoder.decode(value, { stream: true });
+            const htmlText = convertRef.current.toHtml(decodedText);
+            preRef.current.innerHTML += htmlText;
             if (follow) {
               preRef.current.scrollTop = preRef.current.scrollHeight;
             }
@@ -103,7 +107,7 @@ function LogContent({ url, follow }: { url: string; follow: boolean }) {
       <pre
         ref={preRef}
         className={cn(
-          "text-xs bg-muted rounded-md overflow-auto font-mono h-full",
+          "text-xs bg-black text-white rounded-md overflow-auto font-mono h-full whitespace-pre-wrap px-2",
           {
             hidden: loading || error,
           },
@@ -166,7 +170,7 @@ export default function PodLogs({ pod }: PodLogsProps) {
           {allContainers.map((container) => (
             <div
               key={container.name}
-              className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+              className="flex items-center justify-between px-4 py-2 rounded-md hover:bg-muted/50 cursor-pointer border"
               onClick={() => setSelectedContainer(container)}
             >
               <div>
@@ -205,7 +209,7 @@ export default function PodLogs({ pod }: PodLogsProps) {
                     <Label htmlFor="follow">Follow</Label>
                   </div>
                 </DrawerHeader>
-                <div className="flex-grow overflow-hidden px-4 pb-4">
+                <div className="flex-grow overflow-hidden px-4 pb-4 select-text">
                   <LogContent
                     url={getLogUrl(selectedContainer.name, logOption)}
                     follow={follow}

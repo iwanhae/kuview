@@ -50,6 +50,9 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
         );
       })()}
 
+      {/* Pod Logs */}
+      <PodLogs pod={pod} />
+
       {/* Resource Usage */}
       <PodResourceUsage pod={pod} />
 
@@ -86,9 +89,6 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
           )}
         />
       )}
-
-      {/* Pod Logs */}
-      <PodLogs pod={pod} />
 
       {/* Status Section */}
       <PodStatusComponent status={pod.status} />
