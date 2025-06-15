@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -17,9 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func New(cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manager, error) {
+func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manager, error) {
 	logger := logr.New(kulog.New(zlog.Logger))
 	clog.SetLogger(logger)
+
+	go parseMetricsLoop(ctx, cfg, emitter)
 
 	mgr, err := manager.New(&cfg, manager.Options{
 		LeaderElection:   false,

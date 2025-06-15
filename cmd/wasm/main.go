@@ -44,7 +44,7 @@ func run(ctx context.Context) error {
 	}
 
 	mgr, err := controller.New(
-		cfg,
+		ctx, cfg,
 		[]client.Object{
 			&v1.Node{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Node"}},
 			&v1.Pod{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Pod"}},
