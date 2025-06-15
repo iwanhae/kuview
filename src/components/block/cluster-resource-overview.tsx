@@ -1,5 +1,5 @@
 import { useKuview } from "@/hooks/useKuview";
-import type { NodeObject, PodObject, PodMetricsObject } from "@/lib/kuview";
+import type { NodeObject, PodObject, NodeMetricsObject } from "@/lib/kuview";
 import {
   parseCpu,
   parseMemory,
@@ -35,11 +35,10 @@ interface ClusterResourceUsage {
 function calculateClusterResourceUsage(
   nodes: Record<string, NodeObject>,
   pods: Record<string, PodObject>,
-  podMetrics: Record<string, PodMetricsObject>,
+  nodeMetrics: Record<string, NodeMetricsObject>,
 ): ClusterResourceUsage {
   const nodeList = Object.values(nodes);
   const podList = Object.values(pods);
-  const podMetricsList = Object.values(podMetrics);
 
   let totalCpuCapacity = 0;
   let totalMemoryCapacity = 0;
@@ -55,6 +54,12 @@ function calculateClusterResourceUsage(
     const capacity = node.status.capacity || {};
     totalCpuCapacity += parseCpu(capacity.cpu || "0");
     totalMemoryCapacity += parseMemory(capacity.memory || "0");
+
+    const metrics = nodeMetrics[node.metadata.name];
+    if (metrics) {
+      totalCpuUsage += parseCpu(metrics.usage.cpu || "0");
+      totalMemoryUsage += parseMemory(metrics.usage.memory || "0");
+    }
   });
 
   // Calculate total requests and limits from all pods
@@ -76,27 +81,19 @@ function calculateClusterResourceUsage(
       });
     });
 
-  // Calculate total usage from all pod metrics
-  podMetricsList.forEach((podMetric) => {
-    podMetric.containers.forEach((containerMetrics) => {
-      totalCpuUsage += parseCpu(containerMetrics.usage.cpu || "0");
-      totalMemoryUsage += parseMemory(containerMetrics.usage.memory || "0");
-    });
-  });
-
   return {
     cpu: {
       totalCapacity: totalCpuCapacity,
       totalRequests: totalCpuRequests,
       totalLimits: totalCpuLimits,
-      totalUsage: podMetricsList.length > 0 ? totalCpuUsage : undefined,
+      totalUsage: totalCpuUsage,
       nodeCount: nodeList.length,
     },
     memory: {
       totalCapacity: totalMemoryCapacity,
       totalRequests: totalMemoryRequests,
       totalLimits: totalMemoryLimits,
-      totalUsage: podMetricsList.length > 0 ? totalMemoryUsage : undefined,
+      totalUsage: totalMemoryUsage,
       nodeCount: nodeList.length,
     },
   };
@@ -105,14 +102,14 @@ function calculateClusterResourceUsage(
 export default function ClusterResourceOverview() {
   const rawNodes = useKuview("v1/Node");
   const rawPods = useKuview("v1/Pod");
-  const rawPodMetrics = useKuview("metrics.k8s.io/v1beta1/PodMetrics");
+  const rawNodeMetrics = useKuview("metrics.k8s.io/v1beta1/NodeMetrics");
   // Passive mode is used to prevent the chart from recalculating when the data is too big to calculate every time.
   const [passiveMode, setPassiveMode] = useState(false);
 
   const [dataForCalculation, setDataForCalculation] = useState({
     nodes: rawNodes,
     pods: rawPods,
-    podMetrics: rawPodMetrics,
+    nodeMetrics: rawNodeMetrics,
   });
 
   useEffect(() => {
@@ -120,15 +117,15 @@ export default function ClusterResourceOverview() {
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
-      podMetrics: rawPodMetrics,
+      nodeMetrics: rawNodeMetrics,
     });
-  }, [rawNodes, rawPods, rawPodMetrics, passiveMode]);
+  }, [rawNodes, rawPods, rawNodeMetrics, passiveMode]);
 
   const handleRefresh = () => {
     setDataForCalculation({
       nodes: rawNodes,
       pods: rawPods,
-      podMetrics: rawPodMetrics,
+      nodeMetrics: rawNodeMetrics,
     });
   };
 
@@ -137,7 +134,7 @@ export default function ClusterResourceOverview() {
     const result = calculateClusterResourceUsage(
       dataForCalculation.nodes,
       dataForCalculation.pods,
-      dataForCalculation.podMetrics,
+      dataForCalculation.nodeMetrics,
     );
 
     const diff = Math.abs(since.diff());
