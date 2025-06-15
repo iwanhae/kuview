@@ -61,7 +61,7 @@ func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emi
 			},
 		)
 		// in case of Node, filter out heartbeat events
-		if obj.GetObjectKind().GroupVersionKind().String() == "v1/Node" {
+		if obj.GetObjectKind().GroupVersionKind().String() == "/v1, Kind=Node" {
 			p = predicate.TypedFuncs[client.Object]{
 				CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
 					return true
@@ -78,9 +78,7 @@ func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emi
 						old.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
 					}
 
-					result := !reflect.DeepEqual(new, old)
-					fmt.Println("result", result)
-					return result
+					return !reflect.DeepEqual(new.Status, old.Status)
 				},
 				DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
 					return true
