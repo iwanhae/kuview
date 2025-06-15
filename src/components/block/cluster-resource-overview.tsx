@@ -96,7 +96,7 @@ export default function ClusterResourceOverview() {
 
   const clusterUsage = useMemo(() => {
     console.log(
-      "Recalculating clusterUsage due to dataForCalculation update",
+      "[REACT] Recalculating clusterUsage due to dataForCalculation update",
       new Date().toLocaleTimeString(),
     );
     return calculateClusterResourceUsage(

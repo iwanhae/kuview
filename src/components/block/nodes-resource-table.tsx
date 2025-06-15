@@ -138,7 +138,7 @@ export default function NodesResourceTable() {
   const nodeResourceData = useMemo(
     () => {
       console.log(
-        "Recalculating nodeResourceData due to dataForCalculation update",
+        "[REACT] Recalculating nodeResourceData due to dataForCalculation update",
         new Date().toLocaleTimeString(),
       );
       return calculateNodeResourceData(

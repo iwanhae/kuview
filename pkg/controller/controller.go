@@ -17,14 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var logger logr.Logger
-
-func init() {
-	logger = logr.New(kulog.New(zlog.Logger))
-	clog.SetLogger(logger)
-}
-
 func New(cfg rest.Config, objs []client.Object, emitter Emitter) (manager.Manager, error) {
+	logger := logr.New(kulog.New(zlog.Logger))
+	clog.SetLogger(logger)
+
 	mgr, err := manager.New(&cfg, manager.Options{
 		LeaderElection:   false,
 		Metrics:          server.Options{BindAddress: "0"},

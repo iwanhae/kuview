@@ -2,19 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
+	"syscall/js"
 
 	"github.com/iwanhae/kuview/pkg/controller"
-	"github.com/iwanhae/kuview/pkg/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
@@ -24,7 +25,8 @@ func main() {
 		Level(zerolog.InfoLevel)
 
 	log.Info().
-		Msg("Starting kuview server")
+		Strs("env", os.Environ()).
+		Msg("Starting kuview wasm")
 
 	if err := run(signals.SetupSignalHandler()); err != nil {
 		log.Fatal().Err(err).Msg("Failed to run kuview")
@@ -32,13 +34,17 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	cfg := ctrl.GetConfigOrDie()
+	cfg := rest.Config{
+		Host: os.Getenv("HOST"),
+	}
 
-	s := server.New()
-	go http.ListenAndServe(":8080", s)
+	emitter, err := NewJSEventEmitter()
+	if err != nil {
+		return fmt.Errorf("failed to create event emitter: %w", err)
+	}
 
 	mgr, err := controller.New(
-		*cfg,
+		cfg,
 		[]client.Object{
 			&v1.Node{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Node"}},
 			&v1.Pod{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Pod"}},
@@ -46,15 +52,39 @@ func run(ctx context.Context) error {
 			&v1.Service{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"}},
 			&discoveryv1.EndpointSlice{TypeMeta: metav1.TypeMeta{APIVersion: "discovery.k8s.io/v1", Kind: "EndpointSlice"}},
 		},
-		s,
+		emitter,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create a new controller: %w", err)
 	}
 
 	if err := mgr.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start controller manager: %w", err)
+		return fmt.Errorf("failed to start manager: %w", err)
 	}
 
 	return nil
+}
+
+type EventEmitter struct {
+	window js.Value
+}
+
+func NewJSEventEmitter() (*EventEmitter, error) {
+	eventTarget := js.Global()
+
+	res := EventEmitter{
+		window: eventTarget,
+	}
+	return &res, nil
+}
+
+func (j *EventEmitter) Emit(v *controller.Event) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to marshal event")
+		return
+	}
+
+	val := js.Global().Get("JSON").Call("parse", string(b))
+	j.window.Call("send", val)
 }

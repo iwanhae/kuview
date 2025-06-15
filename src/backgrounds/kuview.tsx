@@ -20,7 +20,7 @@ interface WindowWithKuviewQueue extends Window {
 export default function KuviewBackground() {
   // Enqueue events from WASM published events
   useEffect(() => {
-    console.log("KuviewBackground mounted");
+    console.log("[REACT] KuviewBackground mounted");
     // Process any queued events first
     const windowWithQueue = window as WindowWithKuviewQueue;
     if (
@@ -28,15 +28,15 @@ export default function KuviewBackground() {
       windowWithQueue.kuviewEventQueue.length > 0
     ) {
       console.log(
-        "Processing queued events:",
+        "[REACT] Processing queued events:",
         windowWithQueue.kuviewEventQueue,
       );
       windowWithQueue.kuviewEventQueue.forEach((event) => handleEvent(event));
       windowWithQueue.kuviewEventQueue = []; // Clear the queue
-    } else console.log("No queued events");
+    }
 
     // Set the actual event handler
-    console.log("Setting event handler");
+    console.log("[REACT] Setting event handler");
     (window as unknown as WindowWithKuview).kuview = (event: KuviewEvent) => {
       handleEvent(event);
     };
