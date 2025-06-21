@@ -17,6 +17,7 @@ import { getStatusColor } from "@/lib/status";
 import PodLogs from "./pod-logs";
 import PodResourceUsage from "./pod-resource-usage";
 import { PREFIX } from "@/lib/const";
+import PodsVolumeList from "./pods-volume-list";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -89,6 +90,9 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
           )}
         />
       )}
+
+      {/* Volumes */}
+      <PodsVolumeList pods={[pod]} />
 
       {/* Status Section */}
       <PodStatusComponent status={pod.status} />
