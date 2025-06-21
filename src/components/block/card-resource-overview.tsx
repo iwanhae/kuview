@@ -79,7 +79,7 @@ export default function CardResourceOverview(props: Props) {
         {/* Color Legend */}
         {total > 0 && (
           <div className="mb-4">
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
               {healthStats
                 .filter((stat) => stat.value > 0)
                 .map((stat, index) => (
