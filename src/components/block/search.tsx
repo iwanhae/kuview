@@ -161,7 +161,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
   };
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-3 w-full">
       {/* Search Input */}
       <div className="relative">
         <input
@@ -182,13 +182,20 @@ export default function SearchComponent<T extends BaseKubeObject>(
       </div>
 
       {/* Results Count & Status Filter */}
-      <div className="flex items-center justify-between text-sm text-gray-500">
-        <div>
-          Showing {paginatedResources.length} of {filteredResources.length}{" "}
-          {resourceTypeName}s{searchQuery && ` matching "${searchQuery}"`}
-          {selectedStatuses.length > 0 && ` (filtered by status)`}
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <div>
+            Showing {paginatedResources.length} of {filteredResources.length}{" "}
+            {resourceTypeName}s{searchQuery && ` matching "${searchQuery}"`}
+            {selectedStatuses.length > 0 && ` (filtered by status)`}
+          </div>
+          {totalPages > 1 && (
+            <span className="ml-4">
+              Page {currentPage} of {totalPages}
+            </span>
+          )}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="grid grid-cols-3 md:grid-cols-6 items-center justify-between text-sm text-gray-500">
           {OVERVIEW_STATUS_ORDER.map((status) => {
             const count = statusCounts[status];
             if (count === 0 && !selectedStatuses.includes(status)) return null;
@@ -214,11 +221,6 @@ export default function SearchComponent<T extends BaseKubeObject>(
             );
           })}
         </div>
-        {totalPages > 1 && (
-          <span className="ml-4">
-            Page {currentPage} of {totalPages}
-          </span>
-        )}
       </div>
 
       {/* Resource List */}
@@ -231,7 +233,7 @@ export default function SearchComponent<T extends BaseKubeObject>(
           </p>
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg overflow-hidden h-[50vh] overflow-y-auto">
+        <div className="border border-gray-200 rounded-lg overflow-hidden h-[65vh] overflow-y-auto">
           {paginatedResources.map((resource) => (
             <Row
               key={getResourceId(resource)}
