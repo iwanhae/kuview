@@ -47,6 +47,14 @@ func parseMetricsLoop(ctx context.Context, cfg rest.Config, emitter Emitter) {
 		} else {
 			failcount = 0
 			for _, node := range nodes.Items {
+				if node.Usage.Cpu().IsZero() || node.Usage.Memory().IsZero() {
+					// Some Prometheus-based metrics services have bugs that incorrectly report the total CPU usage as zero, which is nonsensical.
+					// Skip for this time.
+					log.Warn().
+						Str("node", node.Name).
+						Msg("some node metrics report a CPU usage of 0. skip this data.")
+					continue
+				}
 				node.APIVersion = "metrics.k8s.io/v1beta1"
 				node.Kind = "NodeMetrics"
 				emitter.Emit(&Event{
