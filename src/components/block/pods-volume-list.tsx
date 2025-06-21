@@ -144,7 +144,7 @@ export default function PodsVolumeList({ pods }: NodeVolumeListProps) {
               return (
                 <TableRow key={`${volume.nickName}-${volume.name}`}>
                   <TableCell>
-                    <div className="space-y-1 w-[200px] overflow-scroll">
+                    <div className="space-y-1 max-w-[200px] overflow-scroll">
                       <Link
                         to={`${PREFIX}/pods?pod=${volume.nickName}`}
                         className="hover:underline font-medium text-sm"
