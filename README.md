@@ -57,6 +57,58 @@ kubectl expose -n kuview deployment kuview --port 8001 --type=NodePort
 # Now you can access KuView at http://<node-ip>:<node-port>/
 ```
 
+### 3. Deploy with Local Helm Chart
+
+This method allows you to deploy KuView using the Helm chart included in this repository. This is useful for customizing your deployment or integrating it into your own Helm-based workflows.
+
+**Prerequisites:**
+- Helm CLI installed.
+- `kubectl` configured to your target Kubernetes cluster.
+
+**Installation:**
+
+1.  **Navigate to the chart directory (if you cloned the repository):**
+    ```bash
+    cd charts/kuview
+    ```
+    If you are using a packaged version of the chart, you can skip this step.
+
+2.  **Install the chart:**
+    You can install the chart into a specific namespace (e.g., `kuview`). If the namespace doesn't exist, Helm can create it for you with the `--create-namespace` flag.
+
+    ```bash
+    # Example: Install with release name 'my-kuview' in namespace 'kuview'
+    helm install my-kuview ./charts/kuview --namespace kuview --create-namespace
+    ```
+    Or, if you are already in the `charts/kuview` directory:
+    ```bash
+    helm install my-kuview . --namespace kuview --create-namespace
+    ```
+
+    You can customize the installation by:
+    *   Using the `--set` flag for individual values (e.g., `--set service.type=NodePort`).
+    *   Creating a custom `my-values.yaml` file and using the `-f` or `--values` flag (e.g., `helm install my-kuview . -n kuview -f my-values.yaml`).
+
+3.  **Accessing KuView:**
+    The output of the `helm install` command will include NOTES with instructions on how to access your KuView deployment. These instructions will vary based on the service type configured (ClusterIP, NodePort, or LoadBalancer).
+
+**Templating the Chart:**
+
+If you want to see the generated Kubernetes manifests without actually deploying the chart, you can use `helm template`:
+
+```bash
+helm template my-kuview ./charts/kuview --namespace kuview > kuview-manifests.yaml
+```
+This will output all the Kubernetes YAML files that the chart would create, allowing you to inspect or modify them before deployment.
+
+**Uninstalling the Chart:**
+
+To uninstall the KuView deployment:
+
+```bash
+helm uninstall my-kuview --namespace kuview
+```
+
 ## Core Features
 
 - **Real-time Monitoring**: Observe live updates of resource states and events within your cluster.

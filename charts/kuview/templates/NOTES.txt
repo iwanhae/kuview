@@ -1,0 +1,57 @@
+{{- define "kuview.notes" }}
+KuView has been deployed.
+
+{{- if .Values.createNamespace }}
+It is deployed in the {{ .Values.namespace }} namespace.
+{{- else }}
+It is deployed in the {{ .Release.Namespace }} namespace.
+{{- end }}
+
+To access KuView, follow these instructions:
+
+{{- if eq .Values.service.type "ClusterIP" }}
+1. Get the KuView service name:
+   export SERVICE_NAME=$(kubectl get svc --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "kuview.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+
+2. If you have kubectl proxy running, you can access KuView at:
+   http://127.0.0.1:8001/api/v1/namespaces/{{ .Release.Namespace }}/services/${SERVICE_NAME}:{{ .Values.service.port }}/proxy/
+
+   Alternatively, use port-forwarding:
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/${SERVICE_NAME} {{ .Values.service.port }}:{{ .Values.service.port }}
+   Then open http://127.0.0.1:{{ .Values.service.port }} in your browser.
+
+{{- else if eq .Values.service.type "NodePort" }}
+1. Get the KuView service name:
+   export SERVICE_NAME=$(kubectl get svc --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "kuview.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+
+2. Get the NodePort:
+   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services ${SERVICE_NAME})
+
+3. Get the IP address of any of your cluster nodes:
+   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+
+4. Access KuView at:
+   http://${NODE_IP}:${NODE_PORT}
+
+{{- else if eq .Values.service.type "LoadBalancer" }}
+1. Get the KuView service name:
+   export SERVICE_NAME=$(kubectl get svc --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "kuview.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+
+2. Get the LoadBalancer IP or Hostname:
+   Watch the service until an external IP or hostname is assigned:
+   kubectl get svc --namespace {{ .Release.Namespace }} ${SERVICE_NAME} --watch
+
+   Once assigned, access KuView at the external IP/hostname on port {{ .Values.service.port }}.
+
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+Alternatively, if you have an Ingress controller configured for {{ .host }}, you can access KuView at:
+  http://{{ .host }}{{ range .paths }}{{ .path }}{{ end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{ .Chart.Name }}
+{{- include "kuview.notes" . }}
