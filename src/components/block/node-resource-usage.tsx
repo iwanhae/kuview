@@ -96,9 +96,7 @@ export default function NodeResourceUsage({ node }: NodeResourceUsageProps) {
     (pod) => pod.spec.nodeName === node.metadata.name,
   );
 
-  const nodeMetrics = Object.values(nodeMetricsData).find(
-    (metrics) => metrics.metadata.name === node.metadata.name,
-  );
+  const nodeMetrics = nodeMetricsData[node.metadata.name];
 
   const resourceUsage = calculateResourceUsage(node, nodePods, nodeMetrics);
 
