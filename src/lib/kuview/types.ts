@@ -81,3 +81,16 @@ export interface KeyToPath {
   path: string;
   mode?: number;
 }
+
+export type LabelSelectorOperator = "In" | "NotIn" | "Exists" | "DoesNotExist";
+
+export interface LabelSelectorRequirement {
+  key: string;
+  operator: LabelSelectorOperator;
+  values?: string[];
+}
+
+export interface LabelSelector {
+  matchLabels?: Labels;
+  matchExpressions?: LabelSelectorRequirement[];
+}

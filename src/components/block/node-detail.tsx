@@ -15,6 +15,7 @@ import NodeResourceUsage from "./node-resource-usage";
 import PodsGrid from "./pods-grid";
 import NodePodList from "./node-pod-list";
 import { useKuview } from "@/hooks/useKuview";
+import NodeVolumeList from "./node-volume-list";
 
 interface NodeDetailProps {
   node: NodeObject;
@@ -55,6 +56,9 @@ export default function NodeDetail({ node, className }: NodeDetailProps) {
 
       {/* Pod List */}
       <NodePodList pods={nodePods} />
+
+      {/* Volume List */}
+      <NodeVolumeList pods={nodePods} />
 
       {/* Status Section */}
       <NodeStatusComponent status={node.status} />

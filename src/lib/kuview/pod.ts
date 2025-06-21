@@ -3,6 +3,7 @@ import type {
   Metadata,
   ResourceList,
   KeyToPath,
+  LabelSelector,
 } from "./types";
 
 export interface PodObject extends KubernetesObject {
@@ -146,7 +147,7 @@ interface Toleration {
   value?: string;
 }
 
-interface Volume {
+export interface Volume {
   name: string;
   persistentVolumeClaim?: PersistentVolumeClaimVolumeSource;
   hostPath?: HostPathVolumeSource;
@@ -154,6 +155,7 @@ interface Volume {
   configMap?: ConfigMapVolumeSource;
   secret?: SecretVolumeSource;
   emptyDir?: EmptyDirVolumeSource;
+  ephemeral?: EphemeralVolumeSource;
 }
 
 interface PersistentVolumeClaimVolumeSource {
@@ -288,4 +290,59 @@ interface PodCondition {
   lastProbeTime?: string | null;
   message?: string;
   reason?: string;
+}
+
+export interface Volume {
+  name: string;
+  volumeSource: VolumeSource;
+}
+
+export interface VolumeSource {
+  hostPath?: HostPathVolumeSource;
+  emptyDir?: EmptyDirVolumeSource;
+  secret?: SecretVolumeSource;
+  persistentVolumeClaim?: PersistentVolumeClaimVolumeSource;
+  configMap?: ConfigMapVolumeSource;
+  ephemeral?: EphemeralVolumeSource;
+}
+
+export type HostPathType =
+  | ""
+  | "DirectoryOrCreate"
+  | "Directory"
+  | "FileOrCreate"
+  | "File"
+  | "Socket"
+  | "CharDevice"
+  | "BlockDevice";
+
+export interface EphemeralVolumeSource {
+  volumeClaimTemplate?: PersistentVolumeClaimTemplate;
+}
+
+export interface PersistentVolumeClaimTemplate {
+  metadata?: Metadata;
+  spec: PersistentVolumeClaimSpec;
+}
+
+export type PersistentVolumeAccessMode =
+  | "ReadWriteOnce"
+  | "ReadOnlyMany"
+  | "ReadWriteMany"
+  | "ReadWriteOncePod";
+
+export interface VolumeResourceRequirements {
+  limits?: ResourceList;
+  requests?: ResourceList;
+}
+
+export type PersistentVolumeMode = "Block" | "Filesystem";
+
+export interface PersistentVolumeClaimSpec {
+  accessModes?: PersistentVolumeAccessMode[];
+  selector?: LabelSelector;
+  resources?: VolumeResourceRequirements;
+  volumeName?: string;
+  storageClassName?: string;
+  volumeMode?: PersistentVolumeMode;
 }
