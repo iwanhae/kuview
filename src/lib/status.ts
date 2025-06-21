@@ -167,6 +167,14 @@ function nodeStatus(node: NodeObject): Condition {
     };
   }
 
+  // Warning: if node is unschedulable
+  if (node.spec.unschedulable) {
+    return {
+      status: Status.Warning,
+      reason: `Node is unschedulable`,
+    };
+  }
+
   return {
     status: Status.Running,
     reason: `Node is ready and all conditions are healthy`,
