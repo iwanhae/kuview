@@ -11,6 +11,7 @@ export default function Root() {
   const pods = useKuview("v1/Pod");
   const namespaces = useKuview("v1/Namespace");
   const services = useKuview("v1/Service");
+  const userGroup = useKuview("kuview.iwanhae.kr/v1/UserGroup");
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -67,6 +68,20 @@ export default function Root() {
           status={Object.values(services).reduce(
             (acc, service) => {
               const status = getStatus(service).status;
+              acc[status] = (acc[status] || 0) + 1;
+              return acc;
+            },
+            {} as Record<Status, number>,
+          )}
+        />
+
+        {/* Users */}
+        <CardResourceOverview
+          href={`${PREFIX}/usergroups`}
+          resourceName="UserGroups"
+          status={Object.values(userGroup).reduce(
+            (acc, userGroup) => {
+              const status = getStatus(userGroup).status;
               acc[status] = (acc[status] || 0) + 1;
               return acc;
             },

@@ -42,7 +42,7 @@ func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emi
 		// Get dereferenced type of the object
 		T := reflect.TypeOf(obj).Elem()
 		c, err := controller.New(
-			fmt.Sprintf("kuview_%s", obj.GetObjectKind().GroupVersionKind().String()),
+			fmt.Sprintf("kuview_%s/%s", obj.GetObjectKind().GroupVersionKind().Group, obj.GetObjectKind().GroupVersionKind().Kind),
 			mgr, controller.Options{
 				Reconciler: &dummyReconciler{
 					T:       T,

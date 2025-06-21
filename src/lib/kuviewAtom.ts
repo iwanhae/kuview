@@ -18,6 +18,7 @@ export const kubernetesAtom = atom<
   "discovery.k8s.io/v1/EndpointSlice": atom<Record<string, KubernetesObject>>(
     {},
   ),
+  "kuview.iwanhae.kr/v1/UserGroup": atom<Record<string, KubernetesObject>>({}), // virtual resource
 });
 
 type ObjectAtom = PrimitiveAtom<

@@ -44,13 +44,14 @@ func (s *Server) Emit(v *controller.Event) {
 	gvk := v.Object.GetObjectKind().GroupVersionKind()
 	namespace := v.Object.GetNamespace()
 	name := v.Object.GetName()
-	key := fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Version, namespace, name)
+	key := fmt.Sprintf("%s/%s/%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind, namespace, name)
 
-	if v.Type == controller.EventTypeCreate {
+	switch v.Type {
+	case controller.EventTypeCreate:
 		s.rwmu.Lock()
 		s.cache[key] = v.Object
 		s.rwmu.Unlock()
-	} else if v.Type == controller.EventTypeDelete {
+	case controller.EventTypeDelete:
 		s.rwmu.Lock()
 		delete(s.cache, key)
 		s.rwmu.Unlock()

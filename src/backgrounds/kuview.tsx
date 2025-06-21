@@ -6,8 +6,10 @@ import {
   useKubernetesAtomSyncHook,
   useServiceEndpointSliceSyncHook,
 } from "@/lib/kuviewAtom";
+
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
+import { SyncUserGroup } from "./userGroup";
 
 interface WindowWithKuview extends Window {
   kuview: (event: KuviewEvent) => void;
@@ -70,6 +72,7 @@ function SyncKubernetes() {
         <SyncKubernetesGVK key={gvk} gvk={gvk} />
       ))}
       <SyncService />
+      <SyncUserGroup />
     </>
   );
 }
