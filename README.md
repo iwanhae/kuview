@@ -101,7 +101,7 @@ All routing logic is located in `src/App.tsx`, with page components in the `src/
 
 ### Backend Development
 
-To support a new resource type, you need to modify both `cmd/server/main.go` (for server mode) and `cmd/wasm/main.go` (for local/WASM mode). The client-side is designed to adapt to these backend changes automatically.
+To support a new resource type, you need to modify `pkg/types/const.go` that defines the resource types. The client-side is designed to adapt to these backend changes automatically.
 
 ## License
 
