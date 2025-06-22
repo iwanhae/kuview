@@ -1,15 +1,215 @@
-import type { KubernetesObject, ResourceList } from "./types";
-import type { PersistentVolumeClaimSpec } from "./pod";
+import type {
+  KubernetesObject,
+  ResourceList,
+  KeyToPath,
+  LabelSelector,
+  Metadata,
+} from "./types";
 
+// Core Volume Types (from Go types.go lines 36-49)
+// Note: VolumeSource is inlined (json:",inline") so volume source fields appear directly on Volume
+export interface Volume {
+  name: string;
+  // Volume source fields (inlined from VolumeSource)
+  hostPath?: HostPathVolumeSource;
+  emptyDir?: EmptyDirVolumeSource;
+  secret?: SecretVolumeSource;
+  persistentVolumeClaim?: PersistentVolumeClaimVolumeSource;
+  configMap?: ConfigMapVolumeSource;
+  ephemeral?: EphemeralVolumeSource;
+  projected?: ProjectedVolumeSource;
+  downwardAPI?: DownwardAPIVolumeSource;
+  nfs?: NFSVolumeSource;
+  csi?: CSIVolumeSource;
+  // Add other volume source types as needed from VolumeSource
+}
+
+// VolumeSource represents the source of a volume to mount (from Go types.go lines 49-230)
+export interface VolumeSource {
+  hostPath?: HostPathVolumeSource;
+  emptyDir?: EmptyDirVolumeSource;
+  secret?: SecretVolumeSource;
+  persistentVolumeClaim?: PersistentVolumeClaimVolumeSource;
+  configMap?: ConfigMapVolumeSource;
+  ephemeral?: EphemeralVolumeSource;
+  projected?: ProjectedVolumeSource;
+  downwardAPI?: DownwardAPIVolumeSource;
+  nfs?: NFSVolumeSource;
+  csi?: CSIVolumeSource;
+  // Add other volume source types as needed
+}
+
+// PersistentVolumeClaimVolumeSource (from Go types.go lines 231-240)
+export interface PersistentVolumeClaimVolumeSource {
+  claimName: string;
+  readOnly?: boolean;
+}
+
+// Volume Source Types
+export interface HostPathVolumeSource {
+  path: string;
+  type?: HostPathType;
+}
+
+export type HostPathType =
+  | ""
+  | "DirectoryOrCreate"
+  | "Directory"
+  | "FileOrCreate"
+  | "File"
+  | "Socket"
+  | "CharDevice"
+  | "BlockDevice";
+
+export interface EmptyDirVolumeSource {
+  medium?: string;
+  sizeLimit?: string;
+}
+
+export interface SecretVolumeSource {
+  secretName?: string;
+  defaultMode?: number;
+  items?: KeyToPath[];
+  optional?: boolean;
+}
+
+export interface ConfigMapVolumeSource {
+  name?: string;
+  defaultMode?: number;
+  items?: KeyToPath[];
+  optional?: boolean;
+}
+
+export interface EphemeralVolumeSource {
+  volumeClaimTemplate?: PersistentVolumeClaimTemplate;
+}
+
+export interface PersistentVolumeClaimTemplate {
+  metadata?: Metadata;
+  spec: PersistentVolumeClaimSpec;
+}
+
+export interface ProjectedVolumeSource {
+  defaultMode?: number;
+  sources?: VolumeProjection[];
+}
+
+export interface VolumeProjection {
+  configMap?: ConfigMapProjection;
+  downwardAPI?: DownwardAPIProjection;
+  secret?: SecretProjection;
+  serviceAccountToken?: ServiceAccountTokenProjection;
+}
+
+export interface ConfigMapProjection {
+  name?: string;
+  items?: KeyToPath[];
+  optional?: boolean;
+}
+
+export interface DownwardAPIProjection {
+  items?: DownwardAPIVolumeFile[];
+}
+
+export interface SecretProjection {
+  name?: string;
+  items?: KeyToPath[];
+  optional?: boolean;
+}
+
+export interface ServiceAccountTokenProjection {
+  audience?: string;
+  expirationSeconds?: number;
+  path: string;
+}
+
+export interface DownwardAPIVolumeSource {
+  items?: DownwardAPIVolumeFile[];
+  defaultMode?: number;
+}
+
+export interface DownwardAPIVolumeFile {
+  path: string;
+  fieldRef?: ObjectFieldSelector;
+  resourceFieldRef?: ResourceFieldSelector;
+  mode?: number;
+}
+
+export interface ObjectFieldSelector {
+  apiVersion?: string;
+  fieldPath: string;
+}
+
+export interface ResourceFieldSelector {
+  containerName?: string;
+  resource: string;
+  divisor?: string;
+}
+
+export interface NFSVolumeSource {
+  server: string;
+  path: string;
+  readOnly?: boolean;
+}
+
+export interface CSIVolumeSource {
+  driver: string;
+  readOnly?: boolean;
+  fsType?: string;
+  volumeAttributes?: Record<string, string>;
+  nodePublishSecretRef?: LocalObjectReference;
+}
+
+export interface LocalObjectReference {
+  name?: string;
+}
+
+// PersistentVolume Types (from Go types.go lines 866-878)
+export type PersistentVolumeAccessMode =
+  | "ReadWriteOnce"
+  | "ReadOnlyMany"
+  | "ReadWriteMany"
+  | "ReadWriteOncePod";
+
+export type PersistentVolumeMode = "Block" | "Filesystem";
+
+// VolumeResourceRequirements (from Go types.go lines 2712-2728)
+export interface VolumeResourceRequirements {
+  limits?: ResourceList;
+  requests?: ResourceList;
+}
+
+// PersistentVolumeClaimSpec (aligned with Go types.go lines 554-632)
+export interface PersistentVolumeClaimSpec {
+  accessModes?: PersistentVolumeAccessMode[];
+  selector?: LabelSelector;
+  resources?: VolumeResourceRequirements;
+  volumeName?: string;
+  storageClassName?: string;
+  volumeMode?: PersistentVolumeMode;
+  dataSource?: TypedLocalObjectReference;
+  dataSourceRef?: TypedObjectReference;
+  volumeAttributesClassName?: string;
+}
+
+export interface TypedLocalObjectReference {
+  apiGroup?: string;
+  kind: string;
+  name: string;
+}
+
+export interface TypedObjectReference {
+  apiGroup?: string;
+  kind: string;
+  name: string;
+  namespace?: string;
+}
+
+// PersistentVolumeSpec for persistent volumes
 export interface PersistentVolumeSpec {
   capacity?: ResourceList;
-  volumeMode?: "Filesystem" | "Block";
-  accessModes?: (
-    | "ReadWriteOnce"
-    | "ReadOnlyMany"
-    | "ReadWriteMany"
-    | "ReadWriteOncePod"
-  )[];
+  volumeMode?: PersistentVolumeMode;
+  accessModes?: PersistentVolumeAccessMode[];
   persistentVolumeReclaimPolicy?: "Retain" | "Recycle" | "Delete";
   storageClassName?: string;
   volumeAttributes?: Record<string, string>;
@@ -73,12 +273,7 @@ export interface PersistentVolumeStatus {
 
 export interface PersistentVolumeClaimStatus {
   phase?: "Pending" | "Bound" | "Lost";
-  accessModes?: (
-    | "ReadWriteOnce"
-    | "ReadOnlyMany"
-    | "ReadWriteMany"
-    | "ReadWriteOncePod"
-  )[];
+  accessModes?: PersistentVolumeAccessMode[];
   capacity?: ResourceList;
   conditions?: Array<{
     type: string;

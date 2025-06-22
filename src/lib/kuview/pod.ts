@@ -1,10 +1,9 @@
+import type { KubernetesObject, Metadata, ResourceList } from "./types";
 import type {
-  KubernetesObject,
-  Metadata,
-  ResourceList,
-  KeyToPath,
-  LabelSelector,
-} from "./types";
+  Volume,
+  ObjectFieldSelector,
+  ResourceFieldSelector,
+} from "./volume";
 
 export interface PodObject extends KubernetesObject {
   kind: "Pod";
@@ -59,17 +58,6 @@ interface EnvVarSource {
   resourceFieldRef?: ResourceFieldSelector;
   configMapKeyRef?: ConfigMapKeySelector;
   secretKeyRef?: SecretKeySelector;
-}
-
-interface ObjectFieldSelector {
-  apiVersion?: string;
-  fieldPath: string;
-}
-
-interface ResourceFieldSelector {
-  containerName?: string;
-  resource: string;
-  divisor?: string;
 }
 
 interface ConfigMapKeySelector {
@@ -147,87 +135,6 @@ interface Toleration {
   value?: string;
 }
 
-export interface Volume {
-  name: string;
-  persistentVolumeClaim?: PersistentVolumeClaimVolumeSource;
-  hostPath?: HostPathVolumeSource;
-  projected?: ProjectedVolumeSource;
-  configMap?: ConfigMapVolumeSource;
-  secret?: SecretVolumeSource;
-  emptyDir?: EmptyDirVolumeSource;
-  ephemeral?: EphemeralVolumeSource;
-}
-
-interface PersistentVolumeClaimVolumeSource {
-  claimName: string;
-  readOnly?: boolean;
-}
-
-interface HostPathVolumeSource {
-  path: string;
-  type?: string;
-}
-
-interface ProjectedVolumeSource {
-  defaultMode?: number;
-  sources?: VolumeProjection[];
-}
-
-interface VolumeProjection {
-  configMap?: ConfigMapProjection;
-  downwardAPI?: DownwardAPIProjection;
-  secret?: SecretProjection;
-  serviceAccountToken?: ServiceAccountTokenProjection;
-}
-
-interface ConfigMapProjection {
-  name?: string;
-  items?: KeyToPath[];
-  optional?: boolean;
-}
-
-interface DownwardAPIProjection {
-  items?: DownwardAPIVolumeFile[];
-}
-
-interface SecretProjection {
-  name?: string;
-  items?: KeyToPath[];
-  optional?: boolean;
-}
-
-interface ServiceAccountTokenProjection {
-  audience?: string;
-  expirationSeconds?: number;
-  path: string;
-}
-
-interface DownwardAPIVolumeFile {
-  fieldRef?: ObjectFieldSelector;
-  mode?: number;
-  path: string;
-  resourceFieldRef?: ResourceFieldSelector;
-}
-
-interface ConfigMapVolumeSource {
-  name?: string;
-  defaultMode?: number;
-  items?: KeyToPath[];
-  optional?: boolean;
-}
-
-interface SecretVolumeSource {
-  secretName?: string;
-  defaultMode?: number;
-  items?: KeyToPath[];
-  optional?: boolean;
-}
-
-interface EmptyDirVolumeSource {
-  medium?: string;
-  sizeLimit?: string;
-}
-
 interface PodStatus {
   conditions?: PodCondition[];
   phase: "Pending" | "Running" | "Succeeded" | "Failed" | "Unknown";
@@ -290,59 +197,4 @@ interface PodCondition {
   lastProbeTime?: string | null;
   message?: string;
   reason?: string;
-}
-
-export interface Volume {
-  name: string;
-  volumeSource: VolumeSource;
-}
-
-export interface VolumeSource {
-  hostPath?: HostPathVolumeSource;
-  emptyDir?: EmptyDirVolumeSource;
-  secret?: SecretVolumeSource;
-  persistentVolumeClaim?: PersistentVolumeClaimVolumeSource;
-  configMap?: ConfigMapVolumeSource;
-  ephemeral?: EphemeralVolumeSource;
-}
-
-export type HostPathType =
-  | ""
-  | "DirectoryOrCreate"
-  | "Directory"
-  | "FileOrCreate"
-  | "File"
-  | "Socket"
-  | "CharDevice"
-  | "BlockDevice";
-
-export interface EphemeralVolumeSource {
-  volumeClaimTemplate?: PersistentVolumeClaimTemplate;
-}
-
-export interface PersistentVolumeClaimTemplate {
-  metadata?: Metadata;
-  spec: PersistentVolumeClaimSpec;
-}
-
-export type PersistentVolumeAccessMode =
-  | "ReadWriteOnce"
-  | "ReadOnlyMany"
-  | "ReadWriteMany"
-  | "ReadWriteOncePod";
-
-export interface VolumeResourceRequirements {
-  limits?: ResourceList;
-  requests?: ResourceList;
-}
-
-export type PersistentVolumeMode = "Block" | "Filesystem";
-
-export interface PersistentVolumeClaimSpec {
-  accessModes?: PersistentVolumeAccessMode[];
-  selector?: LabelSelector;
-  resources?: VolumeResourceRequirements;
-  volumeName?: string;
-  storageClassName?: string;
-  volumeMode?: PersistentVolumeMode;
 }
