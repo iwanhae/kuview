@@ -8,6 +8,7 @@ export * from "./namespace";
 export * from "./metrics";
 export * from "./rbac";
 export * from "./usergroup";
+export * from "./volume";
 
 // Import specific types for the object map
 import type { PodObject } from "./pod";
@@ -23,12 +24,18 @@ import type {
   ClusterRoleBindingObject,
 } from "./rbac";
 import type { UserGroupObject } from "./usergroup";
+import type {
+  PersistentVolumeObject,
+  PersistentVolumeClaimObject,
+} from "./volume";
 
 export interface KuviewObjectMap {
   "v1/Pod": PodObject;
   "v1/Service": ServiceObject;
   "v1/Node": NodeObject;
   "v1/Namespace": NamespaceObject;
+  "v1/PersistentVolume": PersistentVolumeObject;
+  "v1/PersistentVolumeClaim": PersistentVolumeClaimObject;
   "discovery.k8s.io/v1/EndpointSlice": EndpointSliceObject;
   "metrics.k8s.io/v1beta1/NodeMetrics": NodeMetricsObject;
   "metrics.k8s.io/v1beta1/PodMetrics": PodMetricsObject;

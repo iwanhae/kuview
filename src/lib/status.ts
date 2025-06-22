@@ -3,6 +3,8 @@ import type {
   NodeObject,
   PodObject,
   ServiceObject,
+  PersistentVolumeObject,
+  PersistentVolumeClaimObject,
   KubernetesObject,
   Endpoint,
 } from "./kuview";
@@ -120,6 +122,10 @@ export function calcStatus(object: KubernetesObject): Condition {
       return namespaceStatus(object as NamespaceObject);
     case "v1/Service":
       return serviceStatus(object as ServiceObject);
+    case "v1/PersistentVolume":
+      return persistentVolumeStatus(object as PersistentVolumeObject);
+    case "v1/PersistentVolumeClaim":
+      return persistentVolumeClaimStatus(object as PersistentVolumeClaimObject);
     default:
       return {
         status: Status.Pending,
@@ -383,4 +389,102 @@ function serviceStatus(service: ServiceObject): Condition {
     status: Status.Running,
     reason: `${readyEndpoints.length}/${endpoints.length} endpoints ready`,
   };
+}
+
+function persistentVolumeStatus(volume: PersistentVolumeObject): Condition {
+  // Terminating: if deletionTimestamp is not null, return Terminating
+  if (volume.metadata.deletionTimestamp) {
+    return {
+      status: Status.Terminating,
+      reason: `Scheduled for deletion ${dayjs().diff(
+        dayjs(volume.metadata.deletionTimestamp),
+        "second",
+      )} seconds ago`,
+    };
+  }
+
+  switch (volume.status?.phase) {
+    case "Available":
+      return {
+        status: Status.Running,
+        reason: "Volume is available and ready for use",
+      };
+    case "Bound":
+      return {
+        status: Status.Running,
+        reason: "Volume is bound to a claim",
+      };
+    case "Pending":
+      return {
+        status: Status.Pending,
+        reason: "Volume is pending provisioning",
+      };
+    case "Released":
+      return {
+        status: Status.Warning,
+        reason: "Volume is released but not available",
+      };
+    case "Failed":
+      return {
+        status: Status.Error,
+        reason: volume.status?.message || "Volume is in failed state",
+      };
+    default:
+      return {
+        status: Status.Pending,
+        reason: "Volume status is unknown",
+      };
+  }
+}
+
+function persistentVolumeClaimStatus(
+  claim: PersistentVolumeClaimObject,
+): Condition {
+  // Terminating: if deletionTimestamp is not null, return Terminating
+  if (claim.metadata.deletionTimestamp) {
+    return {
+      status: Status.Terminating,
+      reason: `Scheduled for deletion ${dayjs().diff(
+        dayjs(claim.metadata.deletionTimestamp),
+        "second",
+      )} seconds ago`,
+    };
+  }
+
+  switch (claim.status?.phase) {
+    case "Bound":
+      return {
+        status: Status.Running,
+        reason: "Claim is bound to a volume",
+      };
+    case "Pending":
+      // Check if pending for too long
+      if (
+        dayjs(claim.metadata.creationTimestamp).isBefore(
+          dayjs().subtract(5, "minute"),
+        )
+      ) {
+        return {
+          status: Status.Warning,
+          reason: `Claim has been pending for ${dayjs().diff(
+            dayjs(claim.metadata.creationTimestamp),
+            "minute",
+          )} minutes`,
+        };
+      }
+      return {
+        status: Status.Pending,
+        reason: "Claim is pending binding to a volume",
+      };
+    case "Lost":
+      return {
+        status: Status.Error,
+        reason: "Claim has lost its bound volume",
+      };
+    default:
+      return {
+        status: Status.Pending,
+        reason: "Claim status is unknown",
+      };
+  }
 }

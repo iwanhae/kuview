@@ -1,5 +1,13 @@
 import * as React from "react";
-import { Home, Server, Rocket, Layers, Network } from "lucide-react";
+import {
+  Home,
+  Server,
+  Rocket,
+  Layers,
+  Network,
+  Database,
+  HardDrive,
+} from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import { PREFIX } from "@/lib/const";
@@ -31,6 +39,16 @@ const data = {
       title: "Namespace",
       url: `${PREFIX}/namespaces`,
       icon: Layers,
+    },
+    {
+      title: "Persistent Volume",
+      url: `${PREFIX}/pv`,
+      icon: Database,
+    },
+    {
+      title: "Volume Claims",
+      url: `${PREFIX}/pvc`,
+      icon: HardDrive,
     },
   ],
 };
