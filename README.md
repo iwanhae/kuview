@@ -35,9 +35,7 @@ kubectl create namespace kuview
 # Create a ClusterRole for read-only access
 kubectl create clusterrole kuview \
 	--verb=get,list,watch \
-	--resource=nodes,pods,pods/log,namespaces,services,\
-	endpointslices.discovery.k8s.io,\
-	nodes.metrics.k8s.io,pods.metrics.k8s.io
+	--resource=nodes,pods,pods/log,namespaces,services,persistentvolumes,persistentvolumeclaims,rolebindings.rbac.authorization.k8s.io,roles.rbac.authorization.k8s.io,clusterrolebindings.rbac.authorization.k8s.io,clusterroles.rbac.authorization.k8s.io,endpointslices.discovery.k8s.io,nodes.metrics.k8s.io,pods.metrics.k8s.io,serviceaccounts
 
 # Create a ServiceAccount for KuView
 kubectl create -n kuview serviceaccount kuview
