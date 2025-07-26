@@ -34,7 +34,7 @@ const PENDING_CHANGES = new Map<string, _change_operation>();
 
 function getObjectKey(object: KubernetesObject): string {
   // it is suprising that sometimes the uid is not unique, so we need to check the apiVersion and kind as well
-  return `${object.apiVersion}/${object.kind}:${object.metadata.uid}`;
+  return `${object.apiVersion}/${object.kind}:${object.metadata.namespace}/${object.metadata.name}:${object.metadata.uid}`;
 }
 
 export function handleEvent(event: KuviewEvent) {
@@ -91,6 +91,7 @@ export function useGVKSyncHook(gvk: string) {
     });
 
     if (updated) {
+      console.log("updated", gvk, operations);
       setObjects(newObjects);
     }
   };
