@@ -30,17 +30,23 @@ type _change_operation = {
   object: KubernetesObject;
 };
 
-const PENDING_CHANGES: _change_operation[] = [];
+const PENDING_CHANGES = new Map<string, _change_operation>();
+
+function getObjectKey(object: KubernetesObject): string {
+  // it is suprising that sometimes the uid is not unique, so we need to check the apiVersion and kind as well
+  return `${object.apiVersion}/${object.kind}:${object.metadata.uid}`;
+}
 
 export function handleEvent(event: KuviewEvent) {
+  const key = getObjectKey(event.object);
   switch (event.type) {
     case "create":
     case "update":
     case "generic":
-      PENDING_CHANGES.push({ type: "UPSERT", object: event.object });
+      PENDING_CHANGES.set(key, { type: "UPSERT", object: event.object });
       break;
     case "delete":
-      PENDING_CHANGES.push({ type: "DELETE", object: event.object });
+      PENDING_CHANGES.set(key, { type: "DELETE", object: event.object });
       break;
   }
 }
@@ -51,13 +57,21 @@ export function useGVKSyncHook(gvk: string) {
   const [objects, setObjects] = useAtom(objectAtom);
 
   const sync = () => {
-    const operations = PENDING_CHANGES.filter(
-      (operation) =>
-        `${operation.object.apiVersion}/${operation.object.kind}` === gvk,
-    );
-    if (operations.length == 0) return;
+    const operations: _change_operation[] = [];
+    PENDING_CHANGES.forEach((op, key) => {
+      if (`${op.object.apiVersion}/${op.object.kind}` === gvk) {
+        operations.push(op);
+        PENDING_CHANGES.delete(key);
+      }
+    });
+
+    if (operations.length === 0) return;
+
+    const newObjects = { ...objects };
+    let updated = false;
 
     operations.forEach((operation) => {
+      updated = true;
       const { type, object } = operation;
       const { metadata } = object;
       const nn = metadata.namespace
@@ -68,28 +82,17 @@ export function useGVKSyncHook(gvk: string) {
 
       switch (type) {
         case "UPSERT":
-          objects[nn] = object;
+          newObjects[nn] = object;
           break;
         case "DELETE":
-          delete objects[nn];
+          delete newObjects[nn];
           break;
       }
     });
 
-    for (const operation of operations) {
-      const index = PENDING_CHANGES.findIndex(
-        (o) =>
-          // it is suprising that sometimes the uid is not unique, so we need to check the apiVersion and kind as well
-          `${o.object.apiVersion}/${o.object.kind}` ===
-            `${operation.object.apiVersion}/${operation.object.kind}` &&
-          o.object.metadata.uid === operation.object.metadata.uid,
-      );
-      if (index !== -1) {
-        PENDING_CHANGES.splice(index, 1);
-      }
+    if (updated) {
+      setObjects(newObjects);
     }
-
-    setObjects({ ...objects });
   };
 
   useEffect(() => {
@@ -104,7 +107,7 @@ export function useKubernetesAtomSyncHook() {
   const [kubernetes, setKubernetes] = useAtom(kubernetesAtom);
   useEffect(() => {
     const interval = setInterval(() => {
-      for (const operation of PENDING_CHANGES) {
+      for (const operation of PENDING_CHANGES.values()) {
         const { object } = operation;
         const { kind, apiVersion } = object;
         const gvk = `${apiVersion}/${kind}`;
@@ -135,12 +138,15 @@ export function useServiceEndpointSliceSyncHook() {
   const [endpointSlices, setEndpointSlices] = useAtom(endpointSliceAtom);
 
   const sync = () => {
-    // 1. find all operations that are related to services and endpoint slices
-    const operations = PENDING_CHANGES.filter(
-      (operation) =>
-        operation.object.kind === "Service" ||
-        operation.object.kind === "EndpointSlice",
-    );
+    const operations: _change_operation[] = [];
+    PENDING_CHANGES.forEach((op, key) => {
+      if (op.object.kind === "Service" || op.object.kind === "EndpointSlice") {
+        operations.push(op);
+        PENDING_CHANGES.delete(key);
+      }
+    });
+
+    if (operations.length === 0) return;
 
     // 2. update services first
     const serviceOperations = operations.filter(
@@ -216,14 +222,6 @@ export function useServiceEndpointSliceSyncHook() {
           endpointSlices: {},
         };
       }
-    }
-
-    // 6. remove operations from PENDING_CHANGES
-    for (const operation of operations) {
-      const index = PENDING_CHANGES.findIndex(
-        (o) => o.object.metadata.uid === operation.object.metadata.uid,
-      );
-      if (index !== -1) PENDING_CHANGES.splice(index, 1);
     }
 
     setServices({ ...services });
