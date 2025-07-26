@@ -107,7 +107,6 @@ export function useGVKSyncHook(gvk: string) {
 
     if (operations.length === 0) return;
 
-    const newObjects = { ...objects };
     let updated = false;
 
     operations.forEach((operation) => {
@@ -122,17 +121,17 @@ export function useGVKSyncHook(gvk: string) {
 
       switch (type) {
         case "UPSERT":
-          newObjects[nn] = object;
+          objects[nn] = object;
           break;
         case "DELETE":
-          delete newObjects[nn];
+          delete objects[nn];
           break;
       }
     });
 
     if (updated) {
       console.log("updated", gvk, operations);
-      setObjects(newObjects);
+      setObjects({ ...objects });
     }
   };
 
@@ -289,7 +288,6 @@ export function usePodIndexSyncHook() {
 
     if (changes.length === 0) return;
 
-    const newPodIndex = { ...podIndex };
     let updated = false;
 
     changes.forEach((change) => {
@@ -300,23 +298,23 @@ export function usePodIndexSyncHook() {
         : pod.metadata.name;
 
       if (type === "DELETE") {
-        if (newPodIndex[nodeName] && newPodIndex[nodeName][nn]) {
-          const updatedNodePods = { ...newPodIndex[nodeName] };
+        if (podIndex[nodeName] && podIndex[nodeName][nn]) {
+          const updatedNodePods = { ...podIndex[nodeName] };
           delete updatedNodePods[nn];
           if (Object.keys(updatedNodePods).length === 0) {
-            delete newPodIndex[nodeName];
+            delete podIndex[nodeName];
           } else {
-            newPodIndex[nodeName] = updatedNodePods;
+            podIndex[nodeName] = updatedNodePods;
           }
           updated = true;
         }
       } else {
         // UPSERT
-        if (!newPodIndex[nodeName]) {
-          newPodIndex[nodeName] = {};
+        if (!podIndex[nodeName]) {
+          podIndex[nodeName] = {};
         }
-        newPodIndex[nodeName] = {
-          ...newPodIndex[nodeName],
+        podIndex[nodeName] = {
+          ...podIndex[nodeName],
           [nn]: true,
         };
         updated = true;
@@ -325,7 +323,7 @@ export function usePodIndexSyncHook() {
 
     if (updated) {
       console.log("Updated Pod index", changes.length, "operations");
-      setPodIndex(newPodIndex);
+      setPodIndex({ ...podIndex });
     }
   };
 
