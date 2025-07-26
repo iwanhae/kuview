@@ -55,7 +55,7 @@ export default function NodeDetail({ node, className }: NodeDetailProps) {
       <NodeResourceUsage node={node} />
 
       {/* Pod List */}
-      <NodePodList pods={nodePods} />
+      <NodePodList pods={nodePods} node={node} />
 
       {/* Volume List */}
       <PodsVolumeList pods={nodePods} />

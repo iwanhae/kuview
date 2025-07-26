@@ -1,17 +1,21 @@
 "use client";
 
-import type { PodObject, PodMetricsObject } from "@/lib/kuview";
+import type { PodObject, PodMetricsObject, NodeObject } from "@/lib/kuview";
 import { useKuview } from "@/hooks/useKuview";
 import { parseCpu, parseMemory, formatCpu, formatBytes } from "@/lib/utils";
-import { getStatusColor, getStatus } from "@/lib/status";
+import { getStatus, Status } from "@/lib/status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { PREFIX } from "@/lib/const";
 import { useMemo, useState } from "react";
+import Chart from "react-apexcharts";
+import type { ApexOptions } from "apexcharts";
 
 interface NodePodListProps {
   pods: PodObject[];
+  node: NodeObject;
 }
 
 interface PodResourceInfo {
@@ -26,6 +30,12 @@ interface PodResourceInfo {
     limits: number;
   };
 }
+
+type MetricType =
+  | "cpu-usage"
+  | "cpu-requests"
+  | "memory-usage"
+  | "memory-requests";
 
 function calculatePodResourceInfo(
   pod: PodObject,
@@ -79,157 +89,320 @@ function calculatePodResourceInfo(
   };
 }
 
-export default function NodePodList({ pods }: NodePodListProps) {
+export default function NodePodList({ pods, node }: NodePodListProps) {
   const [, setLocation] = useLocation();
-  const [sortBy, setSortBy] = useState<"cpu" | "memory">("memory");
+  const [selectedMetric, setSelectedMetric] =
+    useState<MetricType>("memory-usage");
   const podMetricsData = useKuview("metrics.k8s.io/v1beta1/PodMetrics");
 
-  const handlePodClick = (pod: PodObject) => {
-    const podId = `${pod.metadata.namespace}/${pod.metadata.name}`;
+  const handlePodClick = (podName: string, namespace: string) => {
+    const podId = `${namespace}/${podName}`;
     setLocation(`${PREFIX}/pods?pod=${encodeURIComponent(podId)}`);
   };
 
-  const data = useMemo(() => {
-    return pods
-      .map((pod) => {
-        const podMetrics =
-          podMetricsData[`${pod.metadata.namespace}/${pod.metadata.name}`];
-        const resourceInfo = calculatePodResourceInfo(pod, podMetrics);
-        return {
-          pod,
-          resourceInfo,
-        };
-      })
-      .sort((a, b) => {
-        // sort by selected resource usage
-        let aUsage = 0;
-        let bUsage = 0;
+  const { chartData, chartOptions, nodeCapacity, usedValue } = useMemo(() => {
+    const podsWithResourceInfo = pods.map((pod) => {
+      const podMetrics =
+        podMetricsData[`${pod.metadata.namespace}/${pod.metadata.name}`];
+      const resourceInfo = calculatePodResourceInfo(pod, podMetrics);
+      return {
+        pod,
+        resourceInfo,
+      };
+    });
 
-        if (sortBy === "cpu") {
-          aUsage = a.resourceInfo.cpu.usage || 0;
-          bUsage = b.resourceInfo.cpu.usage || 0;
-        } else {
-          aUsage = a.resourceInfo.memory.usage || 0;
-          bUsage = b.resourceInfo.memory.usage || 0;
+    // Get node capacity
+    let nodeCapacityValue = 0;
+    if (node.status?.allocatable) {
+      switch (selectedMetric) {
+        case "cpu-usage":
+        case "cpu-requests":
+          nodeCapacityValue = parseCpu(node.status.allocatable.cpu || "0");
+          break;
+        case "memory-usage":
+        case "memory-requests":
+          nodeCapacityValue = parseMemory(
+            node.status.allocatable.memory || "0",
+          );
+          break;
+      }
+    }
+
+    // Calculate chart data based on selected metric
+    const podData = podsWithResourceInfo
+      .map(({ pod, resourceInfo }) => {
+        let value = 0;
+        let hasValue = false;
+
+        switch (selectedMetric) {
+          case "cpu-usage":
+            if (resourceInfo.cpu.usage !== undefined) {
+              value = resourceInfo.cpu.usage;
+              hasValue = true;
+            }
+            break;
+          case "cpu-requests":
+            if (resourceInfo.cpu.requests > 0) {
+              value = resourceInfo.cpu.requests;
+              hasValue = true;
+            }
+            break;
+          case "memory-usage":
+            if (resourceInfo.memory.usage !== undefined) {
+              value = resourceInfo.memory.usage;
+              hasValue = true;
+            }
+            break;
+          case "memory-requests":
+            if (resourceInfo.memory.requests > 0) {
+              value = resourceInfo.memory.requests;
+              hasValue = true;
+            }
+            break;
         }
 
-        return bUsage - aUsage;
+        return {
+          pod,
+          value,
+          hasValue,
+        };
+      })
+      .filter(({ hasValue }) => hasValue)
+      .sort((a, b) => b.value - a.value)
+      .map(({ pod, value }) => ({
+        x: `${pod.metadata.name}`,
+        y: value,
+        namespace: pod.metadata.namespace,
+        status: getStatus(pod).status,
+        type: "pod",
+      }));
+
+    const usedValue = podData.reduce((sum, item) => sum + item.y, 0);
+    const availableValue = Math.max(0, nodeCapacityValue - usedValue);
+
+    // Add available/unused space to chart data
+    const chartData = [...podData];
+    if (availableValue > 0) {
+      chartData.push({
+        x: "Available",
+        y: availableValue,
+        namespace: "",
+        status: Status.Running,
+        type: "available",
       });
-  }, [pods, podMetricsData, sortBy]);
+    }
+
+    const totalValue = usedValue + availableValue;
+
+    const chartOptions: ApexOptions = {
+      chart: {
+        type: "treemap",
+        height: 400,
+        events: {
+          dataPointSelection: (event, chartContext, { dataPointIndex }) => {
+            const selectedData = chartData[dataPointIndex];
+            if (
+              selectedData &&
+              typeof selectedData.x === "string" &&
+              selectedData.namespace &&
+              selectedData.type === "pod"
+            ) {
+              handlePodClick(selectedData.x, selectedData.namespace);
+            }
+          },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        style: {
+          fontSize: "12px",
+          fontWeight: "bold",
+        },
+        formatter: function (text, op) {
+          const value = op.value;
+          const percentage =
+            totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : "0";
+
+          let formattedValue = "";
+          if (selectedMetric.includes("cpu")) {
+            formattedValue = formatCpu(value);
+          } else {
+            formattedValue = formatBytes(value);
+          }
+
+          return [`${text}`, `${formattedValue}`, `(${percentage}%)`];
+        },
+      },
+      plotOptions: {
+        treemap: {
+          enableShades: false,
+          distributed: true,
+        },
+      },
+      colors: chartData.map((item) => {
+        if (item.type === "available") {
+          return "#e5e7eb"; // Light gray for available space
+        }
+
+        // Use different colors based on pod size relative to total used resources
+        const podUsagePercent = usedValue > 0 ? (item.y / usedValue) * 100 : 0;
+
+        if (podUsagePercent > 20) {
+          return "#34d399";
+        } else if (podUsagePercent > 10) {
+          return "#6ee7b7";
+        } else {
+          return "#a7f3d0";
+        }
+      }),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      tooltip: {
+        custom: function ({ dataPointIndex }) {
+          const data = chartData[dataPointIndex];
+          if (!data) return "";
+
+          let formattedValue = "";
+          if (selectedMetric.includes("cpu")) {
+            formattedValue = formatCpu(data.y);
+          } else {
+            formattedValue = formatBytes(data.y);
+          }
+
+          const percentage =
+            totalValue > 0 ? ((data.y / totalValue) * 100).toFixed(1) : "0";
+
+          if (data.type === "available") {
+            return `
+              <div class="px-3 py-2 bg-white border rounded shadow-lg">
+                <div class="font-semibold text-blue-600">${data.x}</div>
+                <div class="text-sm">Value: ${formattedValue}</div>
+                <div class="text-sm">Percentage: ${percentage}%</div>
+                <div class="text-xs text-gray-500">Unused node capacity</div>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="px-3 py-2 bg-white border rounded shadow-lg">
+              <div class="font-semibold">${data.x}</div>
+              <div class="text-sm text-gray-600">Namespace: ${data.namespace}</div>
+              <div class="text-sm">Value: ${formattedValue}</div>
+              <div class="text-sm">Percentage: ${percentage}%</div>
+            </div>
+          `;
+        },
+      },
+    };
+
+    return {
+      chartData,
+      chartOptions,
+      totalValue,
+      nodeCapacity: nodeCapacityValue,
+      usedValue,
+    };
+  }, [pods, podMetricsData, selectedMetric, node]);
+
+  const getMetricLabel = (metric: MetricType) => {
+    switch (metric) {
+      case "cpu-usage":
+        return "CPU Usage";
+      case "cpu-requests":
+        return "CPU Requests";
+      case "memory-usage":
+        return "Memory Usage";
+      case "memory-requests":
+        return "Memory Requests";
+    }
+  };
+
+  const getCapacityFormatted = () => {
+    if (selectedMetric.includes("cpu")) {
+      return formatCpu(nodeCapacity);
+    } else {
+      return formatBytes(nodeCapacity);
+    }
+  };
+
+  const getUsedValueFormatted = () => {
+    if (selectedMetric.includes("cpu")) {
+      return formatCpu(usedValue);
+    } else {
+      return formatBytes(usedValue);
+    }
+  };
+
+  const getUtilizationPercentage = () => {
+    if (nodeCapacity > 0) {
+      return ((usedValue / nodeCapacity) * 100).toFixed(1);
+    }
+    return "0";
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Pod Resources ({pods.length})
-          <div className="flex gap-1 items-center">
-            <p className="text-sm text-muted-foreground ">Sort by:</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSortBy((prev) => (prev === "cpu" ? "memory" : "cpu"));
-              }}
-              className="w-20"
-            >
-              {sortBy === "cpu" ? "CPU" : "Memory"}
-            </Button>
+          <div className="text-sm text-muted-foreground flex justify-end gap-3">
+            <div>
+              {getUsedValueFormatted()} / {getCapacityFormatted()} (
+              {getUtilizationPercentage()}%)
+            </div>
           </div>
         </CardTitle>
+        <div className="pt-4">
+          <RadioGroup
+            value={selectedMetric}
+            onValueChange={(value) => setSelectedMetric(value as MetricType)}
+            className="grid grid-cols-4 gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="cpu-usage" id="cpu-usage" />
+              <Label htmlFor="cpu-usage" className="text-sm">
+                CPU Usage
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="cpu-requests" id="cpu-requests" />
+              <Label htmlFor="cpu-requests" className="text-sm">
+                CPU Requests
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="memory-usage" id="memory-usage" />
+              <Label htmlFor="memory-usage" className="text-sm">
+                Memory Usage
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="memory-requests" id="memory-requests" />
+              <Label htmlFor="memory-requests" className="text-sm">
+                Memory Requests
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[250px] overflow-y-auto">
-          {pods.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No pods running on this node
-            </p>
-          ) : (
-            <div className="divide-y">
-              {data.map(({ pod, resourceInfo }) => {
-                const status = getStatus(pod);
-
-                return (
-                  <div
-                    key={`${pod.metadata.namespace}/${pod.metadata.name}`}
-                    className="grid grid-cols-5 gap-4 p-3 rounded-lg hover:bg-muted/50 cursor-pointer"
-                    onClick={() => handlePodClick(pod)}
-                  >
-                    {/* Pod Status */}
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-3 h-3 rounded-full ${getStatusColor(status.status)}`}
-                      />
-                    </div>
-
-                    {/* Pod Namespace & Name */}
-                    <div className="col-span-2 space-y-1">
-                      <div className="text-sm font-medium truncate">
-                        {pod.metadata.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {pod.metadata.namespace}
-                      </div>
-                    </div>
-
-                    {/* CPU Usage, Request, Limit */}
-                    <div className="space-y-1">
-                      <div className="text-xs font-medium">CPU</div>
-                      <div className="text-xs space-y-0.5">
-                        {resourceInfo.cpu.usage !== undefined && (
-                          <div className="text-blue-700">
-                            Usage: {formatCpu(resourceInfo.cpu.usage)}
-                          </div>
-                        )}
-                        {resourceInfo.cpu.requests > 0 && (
-                          <div className="text-blue-500">
-                            Req: {formatCpu(resourceInfo.cpu.requests)}
-                          </div>
-                        )}
-                        {resourceInfo.cpu.limits > 0 && (
-                          <div className="text-blue-500">
-                            Limit: {formatCpu(resourceInfo.cpu.limits)}
-                          </div>
-                        )}
-                        {resourceInfo.cpu.usage === undefined &&
-                          resourceInfo.cpu.requests === 0 &&
-                          resourceInfo.cpu.limits === 0 && (
-                            <div className="text-muted-foreground">-</div>
-                          )}
-                      </div>
-                    </div>
-
-                    {/* Memory Usage, Request, Limit */}
-                    <div className="space-y-1">
-                      <div className="text-xs font-medium">Memory</div>
-                      <div className="text-xs space-y-0.5">
-                        {resourceInfo.memory.usage !== undefined && (
-                          <div className="text-green-700">
-                            Usage: {formatBytes(resourceInfo.memory.usage)}
-                          </div>
-                        )}
-                        {resourceInfo.memory.requests > 0 && (
-                          <div className="text-green-500">
-                            Req: {formatBytes(resourceInfo.memory.requests)}
-                          </div>
-                        )}
-                        {resourceInfo.memory.limits > 0 && (
-                          <div className="text-green-500">
-                            Limit: {formatBytes(resourceInfo.memory.limits)}
-                          </div>
-                        )}
-                        {resourceInfo.memory.usage === undefined &&
-                          resourceInfo.memory.requests === 0 &&
-                          resourceInfo.memory.limits === 0 && (
-                            <div className="text-muted-foreground">-</div>
-                          )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        {pods.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No pods running on this node
+          </p>
+        ) : chartData.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No data available for {getMetricLabel(selectedMetric)}
+          </p>
+        ) : (
+          <div className="w-full">
+            <Chart
+              options={chartOptions}
+              series={[{ data: chartData }]}
+              type="treemap"
+              height={400}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
