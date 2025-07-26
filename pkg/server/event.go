@@ -5,6 +5,7 @@ import (
 
 	"github.com/iwanhae/kuview/pkg/controller"
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
 )
 
 func (s *Server) subscribe(c echo.Context) error {
@@ -13,30 +14,62 @@ func (s *Server) subscribe(c echo.Context) error {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	s.rwmu.RLock()
+	// 1. Subscribe and get a snapshot of the cache AT THE SAME TIME.
+	// This is to prevent a race condition where a client subscribes
+	// and then misses an event that was sent before the client was
+	// able to receive it.
+	s.rwmu.Lock()
+	subCh := make(chan *controller.Event, 1024)
+	s.subscribers[subCh] = struct{}{}
+	cache := make([]*controller.Event, 0, len(s.cache))
 	for _, v := range s.cache {
-		evt := Event{
-			Data: eventAsJSON(&controller.Event{
-				Type:   controller.EventTypeCreate,
-				Object: v,
-			}),
-		}
-		evt.MarshalTo(w)
+		cache = append(cache, &controller.Event{
+			Type:   controller.EventTypeCreate,
+			Object: v,
+		})
 	}
-	s.rwmu.RUnlock()
-	w.Flush()
+	s.rwmu.Unlock()
+	log.Ctx(c.Request().Context()).Info().Msg("subscribed")
 
-	sub, unsubscribe := s.evt.Subscribe()
-	defer unsubscribe()
+	defer func() {
+		s.rwmu.Lock()
+		defer s.rwmu.Unlock()
 
-	for v := range sub {
+		if _, ok := s.subscribers[subCh]; ok {
+			delete(s.subscribers, subCh)
+			close(subCh)
+		}
+		log.Ctx(c.Request().Context()).Info().Msg("unsubscribed")
+	}()
+
+	// 2. Send the snapshot to the client.
+	for _, v := range cache {
 		evt := Event{
 			Data: eventAsJSON(v),
 		}
-		evt.MarshalTo(w)
-		w.Flush()
+		if err := evt.MarshalTo(w); err != nil {
+			return err
+		}
 	}
-	return nil
+	w.Flush()
+
+	// 3. Send real-time events to the client.
+	for {
+		select {
+		case <-c.Request().Context().Done():
+			// Client disconnected.
+			return nil
+		case v := <-subCh:
+			evt := Event{
+				Data: eventAsJSON(v),
+			}
+			if err := evt.MarshalTo(w); err != nil {
+				// Failed to write to client, probably disconnected.
+				return err
+			}
+			w.Flush()
+		}
+	}
 }
 
 // Emit implements controller.Emitter.
@@ -57,9 +90,5 @@ func (s *Server) Emit(v *controller.Event) {
 		s.rwmu.Unlock()
 	}
 	// it must be sent after the cache is updated
-	s.ch <- v
-}
-
-type eventDistributor interface {
-	Subscribe() (<-chan *controller.Event, func())
+	s.evtCh <- v
 }

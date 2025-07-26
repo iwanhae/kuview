@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/iwanhae/kuview/pkg/controller"
-	"github.com/iwanhae/kuview/pkg/distributor"
 	"github.com/iwanhae/kuview/pkg/server/middleware"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
@@ -20,9 +19,11 @@ type Server struct {
 
 	// for caching the objects
 	cache map[string]client.Object
-	ch    chan *controller.Event
 	rwmu  *sync.RWMutex
-	evt   eventDistributor
+
+	// for event distribution
+	subscribers map[chan *controller.Event]struct{}
+	evtCh       chan *controller.Event
 
 	// for proxy-ing the request to kubernetes api server
 	cfg *rest.Config
@@ -37,17 +38,18 @@ func New(cfg *rest.Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a rest client: %w", err)
 	}
-	ch := make(chan *controller.Event)
-	dist := distributor.New(ch, 1024)
+	evtCh := make(chan *controller.Event)
 	s := &Server{
-		Echo:  echo.New(),
-		cache: make(map[string]client.Object),
-		ch:    ch,
-		rwmu:  &sync.RWMutex{},
-		evt:   dist,
-		cfg:   cfg,
-		cl:    cl,
+		Echo:        echo.New(),
+		cache:       make(map[string]client.Object),
+		rwmu:        &sync.RWMutex{},
+		subscribers: make(map[chan *controller.Event]struct{}),
+		evtCh:       evtCh,
+		cfg:         cfg,
+		cl:          cl,
 	}
+
+	go s.runDistributor()
 
 	// Register middleware
 	s.Use(echomiddleware.GzipWithConfig(echomiddleware.GzipConfig{
@@ -84,4 +86,34 @@ func New(cfg *rest.Config) (*Server, error) {
 	s.GET("/api/v1/namespaces/:namespace/pods/:pod/log", s.proxy)
 
 	return s, nil
+}
+
+func (s *Server) runDistributor() {
+	for evt := range s.evtCh {
+		s.rwmu.RLock()
+		// We copy the subscriber channels to a slice under a read lock
+		// to avoid holding the lock for a long time during the send operations.
+		subs := make([]chan *controller.Event, 0, len(s.subscribers))
+		for sub := range s.subscribers {
+			subs = append(subs, sub)
+		}
+		s.rwmu.RUnlock()
+
+		for _, sub := range subs {
+			// Non-blocking send to prevent a slow consumer from halting distribution.
+			select {
+			case sub <- evt:
+			default:
+				// The subscriber's buffer is full. The message is dropped for this subscriber.
+			}
+		}
+	}
+
+	// The source channel has been closed. We must close all subscriber channels.
+	s.rwmu.Lock()
+	defer s.rwmu.Unlock()
+	for sub := range s.subscribers {
+		delete(s.subscribers, sub)
+		close(sub)
+	}
 }
