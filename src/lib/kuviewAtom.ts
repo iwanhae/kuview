@@ -5,6 +5,7 @@ import type {
   KuviewEvent,
   KuviewExtra,
   ServiceObject,
+  PodObject,
 } from "./kuview";
 import { useEffect } from "react";
 import { calcStatus } from "./status";
@@ -21,6 +22,11 @@ export const kubernetesAtom = atom<
   "kuview.iwanhae.kr/v1/UserGroup": atom<Record<string, KubernetesObject>>({}), // virtual resource
 });
 
+// Pod index atom: nodeName -> pod nn -> true
+export const podsByNodeNameIndexAtom = atom<
+  Record<string, Record<string, true>>
+>({});
+
 type ObjectAtom = PrimitiveAtom<
   Record<string /* NamespaceName */, KubernetesObject>
 >;
@@ -32,12 +38,46 @@ type _change_operation = {
 
 const PENDING_CHANGES = new Map<string, _change_operation>();
 
+// A dedicated queue for Pod index changes
+type PodIndexChange = {
+  type: "DELETE" | "UPSERT";
+  pod: PodObject;
+};
+
+const POD_INDEX_CHANGES = new Map<string, PodIndexChange>();
+
 function getObjectKey(object: KubernetesObject): string {
   // it is suprising that sometimes the uid is not unique, so we need to check the apiVersion and kind as well
   return `${object.apiVersion}/${object.kind}:${object.metadata.namespace}/${object.metadata.name}:${object.metadata.uid}`;
 }
 
+// Function to update the Pod index
+function updatePodIndex(event: KuviewEvent) {
+  if (event.object.kind !== "Pod" || event.object.apiVersion !== "v1") {
+    return;
+  }
+
+  const pod = event.object as PodObject;
+  const nodeName = pod.spec?.nodeName;
+  const nn = pod.metadata.namespace
+    ? `${pod.metadata.namespace}/${pod.metadata.name}`
+    : pod.metadata.name;
+
+  // If nodeName doesn't exist, no need to index, so drop it here
+  if (!nodeName || !nn) {
+    return;
+  }
+
+  POD_INDEX_CHANGES.set(nn, {
+    type: event.type === "delete" ? "DELETE" : "UPSERT",
+    pod,
+  });
+}
+
 export function handleEvent(event: KuviewEvent) {
+  // Update Pod index (handled separately from the main logic)
+  updatePodIndex(event);
+
   const key = getObjectKey(event.object);
   switch (event.type) {
     case "create":
@@ -227,6 +267,66 @@ export function useServiceEndpointSliceSyncHook() {
 
     setServices({ ...services });
     setEndpointSlices({ ...endpointSlices });
+  };
+
+  useEffect(() => {
+    const interval = setInterval(sync, DEBOUNCE_MS);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
+// usePodIndexSyncHook: A hook to update the Pod index in real-time
+export function usePodIndexSyncHook() {
+  const [podIndex, setPodIndex] = useAtom(podsByNodeNameIndexAtom);
+
+  const sync = () => {
+    const changes: PodIndexChange[] = [];
+    POD_INDEX_CHANGES.forEach((change, nn) => {
+      changes.push(change);
+      POD_INDEX_CHANGES.delete(nn);
+    });
+
+    if (changes.length === 0) return;
+
+    const newPodIndex = { ...podIndex };
+    let updated = false;
+
+    changes.forEach((change) => {
+      const { type, pod } = change;
+      const nodeName = pod.spec.nodeName!; // From here, we assume nodeName always exists
+      const nn = pod.metadata.namespace
+        ? `${pod.metadata.namespace}/${pod.metadata.name}`
+        : pod.metadata.name;
+
+      if (type === "DELETE") {
+        if (newPodIndex[nodeName] && newPodIndex[nodeName][nn]) {
+          const updatedNodePods = { ...newPodIndex[nodeName] };
+          delete updatedNodePods[nn];
+          if (Object.keys(updatedNodePods).length === 0) {
+            delete newPodIndex[nodeName];
+          } else {
+            newPodIndex[nodeName] = updatedNodePods;
+          }
+          updated = true;
+        }
+      } else {
+        // UPSERT
+        if (!newPodIndex[nodeName]) {
+          newPodIndex[nodeName] = {};
+        }
+        newPodIndex[nodeName] = {
+          ...newPodIndex[nodeName],
+          [nn]: true,
+        };
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      console.log("Updated Pod index", changes.length, "operations");
+      setPodIndex(newPodIndex);
+    }
   };
 
   useEffect(() => {

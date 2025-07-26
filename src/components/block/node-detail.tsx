@@ -14,7 +14,7 @@ import { getStatusColor, getStatus } from "@/lib/status";
 import NodeResourceUsage from "./node-resource-usage";
 import PodsGrid from "./pods-grid";
 import NodePodList from "./node-pod-list";
-import { useKuview } from "@/hooks/useKuview";
+import { usePodsByNode } from "@/hooks/usePodsByNode";
 import PodsVolumeList from "./pods-volume-list";
 
 interface NodeDetailProps {
@@ -24,12 +24,9 @@ interface NodeDetailProps {
 
 export default function NodeDetail({ node, className }: NodeDetailProps) {
   const [jsonExpanded, setJsonExpanded] = useState(false);
-  const podsData = useKuview("v1/Pod");
 
-  // Filter pods that belong to the selected node
-  const nodePods = Object.values(podsData).filter(
-    (pod) => pod.spec.nodeName === node.metadata.name,
-  );
+  // Use optimized hook to get pods for this node
+  const nodePods = usePodsByNode(node.metadata.name);
 
   return (
     <div className={cn("space-y-6", className)}>

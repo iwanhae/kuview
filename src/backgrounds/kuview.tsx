@@ -5,6 +5,7 @@ import {
   useGVKSyncHook,
   useKubernetesAtomSyncHook,
   useServiceEndpointSliceSyncHook,
+  usePodIndexSyncHook,
 } from "@/lib/kuviewAtom";
 
 import { useAtomValue } from "jotai";
@@ -60,6 +61,7 @@ export default function KuviewBackground() {
 
 function SyncKubernetes() {
   useKubernetesAtomSyncHook();
+  usePodIndexSyncHook(); // Added for Pod index synchronization
   const kubernetes = useAtomValue(kubernetesAtom);
   const gvks = Object.keys(kubernetes);
   const normalGVKs = gvks.filter(
