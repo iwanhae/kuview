@@ -199,7 +199,7 @@ export default function NodePodList({ pods, node }: NodePodListProps) {
         type: "treemap",
         height: 400,
         events: {
-          dataPointSelection: (event, chartContext, { dataPointIndex }) => {
+          dataPointSelection: (_event, _chartContext, { dataPointIndex }) => {
             const selectedData = chartData[dataPointIndex];
             if (
               selectedData &&
@@ -255,7 +255,7 @@ export default function NodePodList({ pods, node }: NodePodListProps) {
           return "#a7f3d0";
         }
       }),
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       tooltip: {
         custom: function ({ dataPointIndex }) {
           const data = chartData[dataPointIndex];
