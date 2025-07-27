@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/iwanhae/kuview"
 	"github.com/iwanhae/kuview/pkg/controller"
 	"github.com/iwanhae/kuview/pkg/server/middleware"
 	"github.com/labstack/echo/v4"
@@ -62,8 +63,10 @@ func New(cfg *rest.Config) (*Server, error) {
 		},
 	}))
 	static.Use(echomiddleware.StaticWithConfig(echomiddleware.StaticConfig{
-		Root:  "dist",
-		HTML5: true,
+		Root:       "dist",
+		HTML5:      true,
+		Browse:     true,
+		Filesystem: http.FS(kuview.DistFS),
 	}))
 
 	s.Use(middleware.RequestID())
