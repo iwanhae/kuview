@@ -12,12 +12,11 @@ import PodStatusComponent from "./pod-status";
 import { cn } from "@/lib/utils";
 import PodsGrid from "./pods-grid";
 import { useKuview } from "@/hooks/useKuview";
-import { getStatus } from "@/lib/status";
-import { getStatusColor } from "@/lib/status";
 import PodLogs from "./pod-logs";
 import PodResourceUsage from "./pod-resource-usage";
 import { PREFIX } from "@/lib/const";
 import PodsVolumeList from "./pods-volume-list";
+import MetadataHeader from "./metadata-header";
 
 interface PodDetailProps {
   pod: PodObject;
@@ -30,26 +29,7 @@ export default function PodDetail({ pod, className }: PodDetailProps) {
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Header */}
-      <div className="border-b pb-4">
-        <h2 className="text-xl font-semibold">{pod.metadata.name}</h2>
-        <p className="text-sm text-muted-foreground">
-          {pod.metadata.namespace ? `${pod.metadata.namespace}/` : ""}
-          {pod.metadata.name}
-        </p>
-      </div>
-
-      {(() => {
-        const condition = getStatus(pod);
-        return (
-          <div className="flex items-center gap-2">
-            <div className={`w-5 h-5 ${getStatusColor(condition.status)}`} />
-            <div className="text-sm text-muted-foreground">
-              {condition.reason}
-            </div>
-          </div>
-        );
-      })()}
+      <MetadataHeader object={pod} />
 
       {/* Pod Logs */}
       <PodLogs pod={pod} />

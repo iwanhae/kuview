@@ -9,10 +9,10 @@ import { useState } from "react";
 import MetadataComponent from "./metadata";
 import { cn } from "@/lib/utils";
 import { useKuview } from "@/hooks/useKuview";
-import { getStatusColor, getStatus } from "@/lib/status";
 import ServiceSpecComponent from "./service-spec";
 import ServiceStatusComponent from "./service-status";
 import PodsGrid from "./pods-grid";
+import MetadataHeader from "./metadata-header";
 
 interface ServiceDetailProps {
   service: ServiceObject;
@@ -41,27 +41,7 @@ export default function ServiceDetail({
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Header */}
-      <div className="border-b pb-4">
-        <h2 className="text-xl font-semibold">{service.metadata.name}</h2>
-        <p className="text-sm text-muted-foreground">
-          {service.metadata.namespace ? `${service.metadata.namespace}/` : ""}
-          {service.metadata.name}
-        </p>
-      </div>
-
-      {/* Status */}
-      {(() => {
-        const condition = getStatus(service);
-        return (
-          <div className="flex items-center gap-2">
-            <div className={`w-5 h-5 ${getStatusColor(condition.status)}`} />
-            <div className="text-sm text-muted-foreground">
-              {condition.reason}
-            </div>
-          </div>
-        );
-      })()}
+      <MetadataHeader object={service} />
 
       {/* Target Pods */}
       {targetPods.length > 0 && (

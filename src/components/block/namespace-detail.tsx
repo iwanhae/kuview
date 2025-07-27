@@ -11,9 +11,8 @@ import PodsGrid from "./pods-grid";
 import ServicesGrid from "./services-grid";
 import { cn } from "@/lib/utils";
 import { useKuview } from "@/hooks/useKuview";
-import { getStatus } from "@/lib/status";
-import { getStatusColor } from "@/lib/status";
 import NamespaceSpecComponent from "./namespace-spec";
+import MetadataHeader from "./metadata-header";
 
 interface NamespaceDetailProps {
   namespace: NamespaceObject;
@@ -39,31 +38,7 @@ export default function NamespaceDetail({
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Header */}
-      <div className="border-b pb-4">
-        <h2 className="text-xl font-semibold">{namespace.metadata.name}</h2>
-        <p className="text-sm text-muted-foreground">
-          Namespace • Created{" "}
-          {new Date(namespace.metadata.creationTimestamp).toLocaleDateString()}
-        </p>
-      </div>
-
-      {/* Status */}
-      {(() => {
-        const condition = getStatus(namespace);
-        return (
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-5 h-5 rounded-full ${getStatusColor(
-                condition.status,
-              )}`}
-            />
-            <div className="text-sm text-muted-foreground">
-              {condition.reason}
-            </div>
-          </div>
-        );
-      })()}
+      <MetadataHeader object={namespace} />
 
       {/* Pods Grid */}
       <PodsGrid

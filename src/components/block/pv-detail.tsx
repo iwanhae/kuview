@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import StatusBadge from "./status-badge";
 import Metadata from "./metadata";
 import type { PersistentVolumeObject } from "@/lib/kuview";
 import { formatBytes } from "@/lib/utils";
 import { Status } from "@/lib/status";
+import MetadataHeader from "./metadata-header";
 
 interface PVDetailProps {
   pv: PersistentVolumeObject;
@@ -39,11 +39,7 @@ export default function PVDetail({ pv, className }: PVDetailProps) {
   return (
     <div className={className}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">PersistentVolume Details</h2>
-          <StatusBadge status={getStatusColor(pv.status?.phase)} />
-        </div>
+        <MetadataHeader object={pv} />
 
         {/* Status */}
         <Card>

@@ -8,6 +8,8 @@ import UserGroupOverview from "./usergroup-overview";
 import UserGroupAllRules from "./usergroup-all-rules";
 import UserGroupRoles from "./usergroup-roles";
 import UserGroupBindings from "./usergroup-bindings";
+import MetadataHeader from "./metadata-header";
+import Copy from "./copy";
 
 interface UserGroupDetailProps {
   userGroup: UserGroupObject;
@@ -23,7 +25,24 @@ export default function UserGroupDetail({
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Header */}
+      <MetadataHeader object={userGroup} showCommand={false} />
+      <div>
+        {userGroup.spec.roles.map((role) => {
+          const command = `kubectl get ${role.kind.toLowerCase()} ${
+            role.metadata.namespace ? `-n ${role.metadata.namespace} ` : ""
+          }${role.metadata.name}`;
+          return <Copy text={command} />;
+        })}
+        {userGroup.spec.bindings.map((binding) => {
+          const command = `kubectl get ${binding.kind.toLowerCase()} ${
+            binding.metadata.namespace
+              ? `-n ${binding.metadata.namespace} `
+              : ""
+          }${binding.metadata.name}`;
+          return <Copy text={command} />;
+        })}
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
