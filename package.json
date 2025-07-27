@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && rm -rf dist && vite build",
-    "wasm": "GOOS=js GOARCH=wasm go build -o static/main.wasm ./cmd/wasm",
+    "wasm": "GOOS=js GOARCH=wasm go build -v -o static/main.wasm ./cmd/wasm",
     "lint": "tsc -b && eslint .",
     "preview": "kubectl proxy --www=./dist --www-prefix=/static"
   },

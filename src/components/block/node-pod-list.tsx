@@ -13,6 +13,8 @@ import { useMemo, useState } from "react";
 import Chart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 
+const MAX_PODS = 50;
+
 interface NodePodListProps {
   pods: PodObject[];
   node: NodeObject;
@@ -129,7 +131,7 @@ export default function NodePodList({ pods, node }: NodePodListProps) {
     }
 
     // Calculate chart data based on selected metric
-    const podData = podsWithResourceInfo
+    const allPodsWithValues = podsWithResourceInfo
       .map(({ pod, resourceInfo }) => {
         let value = 0;
         let hasValue = false;
@@ -168,14 +170,41 @@ export default function NodePodList({ pods, node }: NodePodListProps) {
         };
       })
       .filter(({ hasValue }) => hasValue)
-      .sort((a, b) => b.value - a.value)
-      .map(({ pod, value }) => ({
+      .sort((a, b) => b.value - a.value);
+
+    let podData;
+
+    if (allPodsWithValues.length > MAX_PODS) {
+      const topPods = allPodsWithValues.slice(0, MAX_PODS);
+      const otherPods = allPodsWithValues.slice(MAX_PODS);
+      const otherPodsValue = otherPods.reduce((sum, p) => sum + p.value, 0);
+
+      podData = topPods.map(({ pod, value }) => ({
         x: `${pod.metadata.name}`,
         y: value,
         namespace: pod.metadata.namespace,
         status: getStatus(pod).status,
         type: "pod",
       }));
+
+      if (otherPodsValue > 0) {
+        podData.push({
+          x: "Others",
+          y: otherPodsValue,
+          namespace: "multiple",
+          status: Status.Running,
+          type: "other",
+        });
+      }
+    } else {
+      podData = allPodsWithValues.map(({ pod, value }) => ({
+        x: `${pod.metadata.name}`,
+        y: value,
+        namespace: pod.metadata.namespace,
+        status: getStatus(pod).status,
+        type: "pod",
+      }));
+    }
 
     const usedValue = podData.reduce((sum, item) => sum + item.y, 0);
     const availableValue = Math.max(0, nodeCapacityValue - usedValue);
@@ -243,6 +272,9 @@ export default function NodePodList({ pods, node }: NodePodListProps) {
         if (item.type === "available") {
           return "#e5e7eb"; // Light gray for available space
         }
+        if (item.type === "other") {
+          return "#9ca3af"; // Gray for etc
+        }
 
         // Use different colors based on pod size relative to total used resources
         const podUsagePercent = usedValue > 0 ? (item.y / usedValue) * 100 : 0;
@@ -278,6 +310,21 @@ export default function NodePodList({ pods, node }: NodePodListProps) {
                 <div class="text-sm">Value: ${formattedValue}</div>
                 <div class="text-sm">Percentage: ${percentage}%</div>
                 <div class="text-xs text-gray-500">Unused node capacity</div>
+              </div>
+            `;
+          }
+
+          if (data.type === "other") {
+            const otherPodsCount =
+              allPodsWithValues.length > MAX_PODS
+                ? allPodsWithValues.length - MAX_PODS
+                : 0;
+            return `
+              <div class="px-3 py-2 bg-white border rounded shadow-lg">
+                <div class="font-semibold">${data.x} (${otherPodsCount} pods)</div>
+                <div class="text-sm">Value: ${formattedValue}</div>
+                <div class="text-sm">Percentage: ${percentage}%</div>
+                <div class="text-xs text-gray-500">Other pods combined</div>
               </div>
             `;
           }
