@@ -70,6 +70,9 @@ func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emi
 					new := e.ObjectNew.(*v1.Node)
 					old := e.ObjectOld.(*v1.Node)
 
+					new.ObjectMeta.ResourceVersion = "erasedByKuview"
+					old.ObjectMeta.ResourceVersion = "erasedByKuview"
+
 					// clear last heartbeat time to prevent unnecessary updates
 					for i := range new.Status.Conditions {
 						new.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
@@ -78,7 +81,7 @@ func New(ctx context.Context, cfg rest.Config, objs []client.Object, emitter Emi
 						old.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
 					}
 
-					return !reflect.DeepEqual(new.Status, old.Status)
+					return !reflect.DeepEqual(new, old)
 				},
 				DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
 					return true
