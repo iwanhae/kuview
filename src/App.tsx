@@ -12,6 +12,7 @@ import Debug from "./pages/debug";
 import { PREFIX } from "./lib/const";
 import { AppSidebar } from "./components/app-sidebar";
 import UserGroupsPage from "./pages/usergroups";
+import ResourceOverviewPage from "./pages/resource-overview";
 
 export default function Page() {
   return (
@@ -22,6 +23,10 @@ export default function Page() {
         <div className="py-6">
           <Switch>
             <Route path={`${PREFIX}/`} component={Root} />
+            <Route
+              path={`${PREFIX}/resource-overview`}
+              component={ResourceOverviewPage}
+            />
             <Route path={`${PREFIX}/nodes`} component={Node} />
             <Route path={`${PREFIX}/pods`} component={Pod} />
             <Route path={`${PREFIX}/namespaces`} component={Namespace} />

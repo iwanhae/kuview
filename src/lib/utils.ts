@@ -112,7 +112,7 @@ export function formatBytes(bytes: number | string): string {
  */
 export function formatCpu(millicores: number): string {
   if (millicores < 1000) {
-    return `${millicores}m`;
+    return `${millicores.toFixed(1)}m`;
   }
   return `${(millicores / 1000).toFixed(1)}`;
 }

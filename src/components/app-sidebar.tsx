@@ -7,6 +7,7 @@ import {
   Network,
   Database,
   HardDrive,
+  BarChart3,
 } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
@@ -19,6 +20,11 @@ const data = {
       title: "Home",
       url: `${PREFIX}/`,
       icon: Home,
+    },
+    {
+      title: "Resource Overview",
+      url: `${PREFIX}/resource-overview`,
+      icon: BarChart3,
     },
     {
       title: "Node",
