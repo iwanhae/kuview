@@ -118,6 +118,9 @@ func (s *Server) encodeEventsParallel(ctx context.Context, cache []*controller.E
 					if !ok {
 						return
 					}
+					if v == nil {
+						continue
+					}
 					evt := Event{Data: eventAsJSON(v)}
 					buf := bytes.NewBuffer(nil)
 
