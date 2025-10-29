@@ -94,6 +94,12 @@ func (s *Server) Emit(v *controller.Event) {
 	s.evtCh <- v
 }
 
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return bytes.NewBuffer(make([]byte, 0, 4096))
+	},
+}
+
 func (s *Server) encodeEventsParallel(ctx context.Context, cache []*controller.Event) <-chan []byte {
 	ch := make(chan []byte, 10*runtime.NumCPU())
 
@@ -122,13 +128,20 @@ func (s *Server) encodeEventsParallel(ctx context.Context, cache []*controller.E
 						continue
 					}
 					evt := Event{Data: eventAsJSON(v)}
-					buf := bytes.NewBuffer(nil)
+					buf := bufferPool.Get().(*bytes.Buffer)
+					buf.Reset()
 
 					if err := evt.MarshalTo(buf); err != nil {
 						log.Error().Err(err).Msg("failed to marshal event to buffer")
+						bufferPool.Put(buf)
 						continue
 					}
-					ch <- buf.Bytes()
+					result := buf.Bytes()
+					// Make a copy of the bytes before putting the buffer back
+					data := make([]byte, len(result))
+					copy(data, result)
+					bufferPool.Put(buf)
+					ch <- data
 				}
 			}
 		}()
