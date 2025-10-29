@@ -9,20 +9,56 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Parse Kubernetes CPU value to millicores
- * Examples: "100m" -> 100, "0.1" -> 100, "1" -> 1000, "1000n" -> 1
+ 
+// k8s.io/apimachinery/pkg/api/resource
+func (l fastLookup) interpret(s suffix) (base, exponent int32, format Format, ok bool) {
+	switch s {
+	case "":
+		return 10, 0, DecimalSI, true
+	case "n":
+		return 10, -9, DecimalSI, true
+	case "u":
+		return 10, -6, DecimalSI, true
+	case "m":
+		return 10, -3, DecimalSI, true
+	case "k":
+		return 10, 3, DecimalSI, true
+	case "M":
+		return 10, 6, DecimalSI, true
+	case "G":
+		return 10, 9, DecimalSI, true
+	}
+	return l.suffixHandler.interpret(s)
+}
  */
 export function parseCpu(value: string): number {
   if (!value) return 0;
 
-  if (value.endsWith("m")) {
-    return parseInt(value.slice(0, -1), 10);
-  }
-
   if (value.endsWith("n")) {
-    return Math.ceil(parseInt(value.slice(0, -1), 10) / 1000_000);
+    return Math.ceil(parseInt(value.slice(0, -1), 10) / 1_000_000);
   }
 
-  return Math.round(parseFloat(value) * 1000);
+  if (value.endsWith("u")) {
+    return Math.ceil(parseInt(value.slice(0, -1), 10) / 1_000);
+  }
+
+  if (value.endsWith("m")) {
+    return Math.ceil(parseInt(value.slice(0, -1), 10));
+  }
+
+  if (value.endsWith("k")) {
+    return Math.ceil(parseInt(value.slice(0, -1), 10) * 1_000_000);
+  }
+
+  if (value.endsWith("M")) {
+    return Math.ceil(parseInt(value.slice(0, -1), 10) * 1_000_000_000);
+  }
+
+  if (value.endsWith("G")) {
+    return Math.ceil(parseInt(value.slice(0, -1), 10) * 1_000_000_000_000);
+  }
+
+  return Math.round(parseFloat(value) * 1_000);
 }
 
 /**
