@@ -243,18 +243,26 @@ export default function ResourceOverviewPage() {
     heatmapData: podHeatmapData,
     chartOptions: podChartOptions,
     minMemory: podMinMemory,
+    maxMemory: podMaxMemory,
     minCpu: podMinCpu,
+    maxCpu: podMaxCpu,
     memoryStep: podMemoryStep,
     cpuStep: podCpuStep,
+    memoryBuckets: podMemoryBuckets,
+    cpuBuckets: podCpuBuckets,
   } = useMemo(() => {
     if (podResourceData.length === 0) {
       return {
         heatmapData: [],
         chartOptions: {},
         minMemory: 0,
+        maxMemory: 0,
         minCpu: 0,
+        maxCpu: 0,
         memoryStep: 0,
         cpuStep: 0,
+        memoryBuckets: 0,
+        cpuBuckets: 0,
       };
     }
 
@@ -402,9 +410,13 @@ export default function ResourceOverviewPage() {
       heatmapData: series,
       chartOptions: options,
       minMemory,
+      maxMemory,
       minCpu,
+      maxCpu,
       memoryStep,
       cpuStep,
+      memoryBuckets,
+      cpuBuckets,
     };
   }, [podResourceData]);
 
@@ -413,18 +425,26 @@ export default function ResourceOverviewPage() {
     heatmapData: nodeHeatmapData,
     chartOptions: nodeChartOptions,
     minMemory: nodeMinMemory,
+    maxMemory: nodeMaxMemory,
     minCpu: nodeMinCpu,
+    maxCpu: nodeMaxCpu,
     memoryStep: nodeMemoryStep,
     cpuStep: nodeCpuStep,
+    memoryBuckets: nodeMemoryBuckets,
+    cpuBuckets: nodeCpuBuckets,
   } = useMemo(() => {
     if (nodeResourceData.length === 0) {
       return {
         heatmapData: [],
         chartOptions: {},
         minMemory: 0,
+        maxMemory: 0,
         minCpu: 0,
+        maxCpu: 0,
         memoryStep: 0,
         cpuStep: 0,
+        memoryBuckets: 0,
+        cpuBuckets: 0,
       };
     }
 
@@ -571,9 +591,13 @@ export default function ResourceOverviewPage() {
       heatmapData: series,
       chartOptions: options,
       minMemory,
+      maxMemory,
       minCpu,
+      maxCpu,
       memoryStep,
       cpuStep,
+      memoryBuckets,
+      cpuBuckets,
     };
   }, [nodeResourceData]);
 
@@ -585,6 +609,10 @@ export default function ResourceOverviewPage() {
       const memoryMin = podMinMemory + memIdx * podMemoryStep;
       const memoryMax = podMinMemory + (memIdx + 1) * podMemoryStep;
 
+      // Check if this is the last bucket in each dimension
+      const isLastCpuBucket = cpuIdx === podCpuBuckets - 1;
+      const isLastMemoryBucket = memIdx === podMemoryBuckets - 1;
+
       setSelectedRange({ cpuMin, cpuMax, memoryMin, memoryMax });
 
       // Filter pods in this range
@@ -593,9 +621,11 @@ export default function ResourceOverviewPage() {
         const podCpuCores = pod.cpu / 1000;
         return (
           podCpuCores >= cpuMin &&
-          podCpuCores < cpuMax &&
+          (isLastCpuBucket ? podCpuCores <= podMaxCpu : podCpuCores < cpuMax) &&
           podMemoryGB >= memoryMin &&
-          podMemoryGB < memoryMax
+          (isLastMemoryBucket
+            ? podMemoryGB <= podMaxMemory
+            : podMemoryGB < memoryMax)
         );
       });
 
@@ -603,7 +633,17 @@ export default function ResourceOverviewPage() {
       setSelectedCellPods(podsInRange.slice(0, 100));
       setSelectedCellNodes([]);
     },
-    [podMinCpu, podMinMemory, podCpuStep, podMemoryStep, podResourceData],
+    [
+      podMinCpu,
+      podMaxCpu,
+      podMinMemory,
+      podMaxMemory,
+      podCpuStep,
+      podMemoryStep,
+      podCpuBuckets,
+      podMemoryBuckets,
+      podResourceData,
+    ],
   );
 
   // Handle Node heatmap cell click
@@ -614,6 +654,10 @@ export default function ResourceOverviewPage() {
       const memoryMin = nodeMinMemory + memIdx * nodeMemoryStep;
       const memoryMax = nodeMinMemory + (memIdx + 1) * nodeMemoryStep;
 
+      // Check if this is the last bucket in each dimension
+      const isLastCpuBucket = cpuIdx === nodeCpuBuckets - 1;
+      const isLastMemoryBucket = memIdx === nodeMemoryBuckets - 1;
+
       setSelectedRange({ cpuMin, cpuMax, memoryMin, memoryMax });
 
       // Filter nodes in this range
@@ -622,16 +666,30 @@ export default function ResourceOverviewPage() {
         const nodeCpuCores = node.cpu / 1000;
         return (
           nodeCpuCores >= cpuMin &&
-          nodeCpuCores < cpuMax &&
+          (isLastCpuBucket
+            ? nodeCpuCores <= nodeMaxCpu
+            : nodeCpuCores < cpuMax) &&
           nodeMemoryGB >= memoryMin &&
-          nodeMemoryGB < memoryMax
+          (isLastMemoryBucket
+            ? nodeMemoryGB <= nodeMaxMemory
+            : nodeMemoryGB < memoryMax)
         );
       });
 
       setSelectedCellNodes(nodesInRange);
       setSelectedCellPods([]);
     },
-    [nodeMinCpu, nodeMinMemory, nodeCpuStep, nodeMemoryStep, nodeResourceData],
+    [
+      nodeMinCpu,
+      nodeMaxCpu,
+      nodeMinMemory,
+      nodeMaxMemory,
+      nodeCpuStep,
+      nodeMemoryStep,
+      nodeCpuBuckets,
+      nodeMemoryBuckets,
+      nodeResourceData,
+    ],
   );
 
   // Register click handlers on window for ApexCharts callbacks
