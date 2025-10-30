@@ -38,8 +38,13 @@ func parseMetricsLoop(ctx context.Context, cfg rest.Config, emitter Emitter) {
 	log.Info().Msg("starting metrics loop")
 
 	failcount := 0
+	// Maps to track resources from previous iterations for GC
+	previousNodes := make(map[string]*metricsv1beta1.NodeMetrics)
+	previousPods := make(map[string]*metricsv1beta1.PodMetrics)
 
 	for ctx.Err() == nil {
+		currentNodes := make(map[string]*metricsv1beta1.NodeMetrics)
+
 		nodes := &metricsv1beta1.NodeMetricsList{}
 		if err := cl.Get().AbsPath("/apis/metrics.k8s.io/v1beta1/nodes").Do(ctx).Into(nodes); err != nil {
 			log.Error().Err(err).Msg("failed to get nodes")
@@ -57,12 +62,30 @@ func parseMetricsLoop(ctx context.Context, cfg rest.Config, emitter Emitter) {
 				}
 				node.APIVersion = "metrics.k8s.io/v1beta1"
 				node.Kind = "NodeMetrics"
+
+				nodeCopy := node
+				currentNodes[node.Name] = &nodeCopy
+
 				emitter.Emit(&Event{
 					Type:   EventTypeCreate,
 					Object: &node,
 				})
 			}
+
+			// GC: emit Delete events for nodes that existed before but are now gone
+			for nodeName, prevNode := range previousNodes {
+				if _, exists := currentNodes[nodeName]; !exists {
+					log.Info().Str("node", nodeName).Msg("node metrics disappeared, emitting delete event")
+					emitter.Emit(&Event{
+						Type:   EventTypeDelete,
+						Object: prevNode,
+					})
+				}
+			}
+			previousNodes = currentNodes
 		}
+
+		currentPods := make(map[string]*metricsv1beta1.PodMetrics)
 
 		pods := &metricsv1beta1.PodMetricsList{}
 		if err := cl.Get().AbsPath("/apis/metrics.k8s.io/v1beta1/pods").Do(ctx).Into(pods); err != nil {
@@ -73,11 +96,31 @@ func parseMetricsLoop(ctx context.Context, cfg rest.Config, emitter Emitter) {
 			for _, pod := range pods.Items {
 				pod.APIVersion = "metrics.k8s.io/v1beta1"
 				pod.Kind = "PodMetrics"
+
+				podKey := pod.Namespace + "/" + pod.Name
+				podCopy := pod
+				currentPods[podKey] = &podCopy
+
 				emitter.Emit(&Event{
 					Type:   EventTypeCreate,
 					Object: &pod,
 				})
 			}
+
+			// GC: emit Delete events for pods that existed before but are now gone
+			for podKey, prevPod := range previousPods {
+				if _, exists := currentPods[podKey]; !exists {
+					log.Info().
+						Str("namespace", prevPod.Namespace).
+						Str("pod", prevPod.Name).
+						Msg("pod metrics disappeared, emitting delete event")
+					emitter.Emit(&Event{
+						Type:   EventTypeDelete,
+						Object: prevPod,
+					})
+				}
+			}
+			previousPods = currentPods
 		}
 
 		if failcount > 10 {
